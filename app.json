@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "SmartChef",
+    "slug": "smart-chef-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "smart-chef",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.smartchef.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F9F6F0"
+      },
+      "package": "com.smartchef.mobile"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
