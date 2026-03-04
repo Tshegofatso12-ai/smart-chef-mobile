@@ -33,6 +33,7 @@ try {
 }
 
 import { Icon } from "@/components/Icon";
+import { RecipeRow } from "@/components/RecipeRow";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useAppContext } from "@/context/AppContext";
 import {
@@ -68,31 +69,6 @@ function getGreeting(): string {
   if (hour < 12) return "Good Morning,";
   if (hour < 18) return "Good Afternoon,";
   return "Good Evening,";
-}
-
-function SavedRecipeRow({ recipe, sessionId }: { recipe: Recipe; sessionId: string }) {
-  return (
-    <Pressable
-      onPress={() => router.push({ pathname: "/recipe/[id]", params: { id: recipe.id, sessionId } })}
-      style={({ pressed }) => [styles.savedRow, { opacity: pressed ? 0.85 : 1 }]}
-    >
-      <LinearGradient
-        colors={recipe.gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.savedRowSwatch}
-      />
-      <View style={{ flex: 1, gap: 3 }}>
-        <Text style={styles.savedRowTitle} numberOfLines={1}>{recipe.title}</Text>
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-          <Text style={styles.savedRowMeta}>{recipe.cookTime}</Text>
-          <Text style={styles.savedRowMeta}>·</Text>
-          <Text style={styles.savedRowMeta}>{recipe.calories}</Text>
-        </View>
-      </View>
-      <Icon icon="solar:alt-arrow-right-linear" size={16} color={COLORS.mutedForeground} />
-    </Pressable>
-  );
 }
 
 export default function HomeScreen() {
@@ -457,7 +433,7 @@ export default function HomeScreen() {
                 {savedEntries.map(({ recipe, session }, idx) => (
                   <React.Fragment key={recipe.id}>
                     {idx > 0 && <View style={styles.divider} />}
-                    <SavedRecipeRow recipe={recipe} sessionId={session.id} />
+                    <RecipeRow recipe={recipe} sessionId={session.id} isSaved />
                   </React.Fragment>
                 ))}
               </View>
@@ -643,33 +619,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
-  },
-  savedRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    gap: 12,
-  },
-  savedRowSwatch: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    flexShrink: 0,
-  },
-  savedRowTitle: {
-    fontFamily: "NunitoSans_700Bold",
-    fontSize: 13,
-    color: "#2C332A",
-  },
-  savedRowMeta: {
-    fontFamily: "NunitoSans_400Regular",
-    fontSize: 11,
-    color: "#7B8579",
+    padding: 20,
   },
   divider: {
     height: 1,
     backgroundColor: "rgba(226,223,216,0.6)",
-    marginHorizontal: 14,
+    marginHorizontal: 16,
+    
   },
   voiceCard: {
     marginHorizontal: 24,
