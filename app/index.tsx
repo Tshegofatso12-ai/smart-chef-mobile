@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,11 +7,31 @@ import {
   Pressable,
   Image,
   StyleSheet,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import * as ImagePicker from "expo-image-picker";
+
+// expo-speech-recognition requires a native build — guard for Expo Go
+let ExpoSpeechRecognitionModule: any = null;
+let useSpeechRecognitionEvent: (event: string, cb: (e: any) => void) => void = () => {};
+try {
+  const speechMod = require("expo-speech-recognition");
+  ExpoSpeechRecognitionModule = speechMod.ExpoSpeechRecognitionModule;
+  useSpeechRecognitionEvent = speechMod.useSpeechRecognitionEvent;
+} catch {
+  // running in Expo Go — voice input disabled
+}
 import { Icon } from "@/components/Icon";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { useAppContext } from "@/context/AppContext";
+import {
+  extractIngredientsFromText,
+  extractIngredientsFromImage,
+} from "@/lib/claude";
 
 const COLORS = {
   background: "#F9F6F0",
@@ -69,9 +89,144 @@ function getGreeting(): string {
 }
 
 export default function HomeScreen() {
-  const [activeFilter, setActiveFilter] = useState("low-fat");
+  const { activeDietFilter, setActiveDietFilter, setTrayIngredients } = useAppContext();
   const [ingredientInput, setIngredientInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
+  const [isTextLoading, setIsTextLoading] = useState(false);
+  const [isScanLoading, setIsScanLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isVoiceLoading, setIsVoiceLoading] = useState(false);
+  const transcriptRef = useRef("");
+
+  // Speech recognition events
+  useSpeechRecognitionEvent("result", (event) => {
+    const transcript = event.results[0]?.transcript ?? "";
+    transcriptRef.current = transcript;
+  });
+
+  useSpeechRecognitionEvent("end", async () => {
+    setIsListening(false);
+    const transcript = transcriptRef.current;
+    transcriptRef.current = "";
+    if (!transcript) return;
+
+    setIsVoiceLoading(true);
+    try {
+      const ingredients = await extractIngredientsFromText(transcript);
+      setTrayIngredients(ingredients);
+      router.push("/ingredient-tray");
+    } catch {
+      Alert.alert("Error", "Could not extract ingredients from voice. Please try again.");
+    } finally {
+      setIsVoiceLoading(false);
+    }
+  });
+
+  useSpeechRecognitionEvent("error", () => {
+    setIsListening(false);
+    Alert.alert("Voice Error", "Speech recognition failed. Please try again.");
+  });
+
+  const handleTextSubmit = async () => {
+    const text = ingredientInput.trim();
+    if (!text) return;
+
+    setIsTextLoading(true);
+    try {
+      const ingredients = await extractIngredientsFromText(text);
+      setTrayIngredients(ingredients);
+      setIngredientInput("");
+      router.push("/ingredient-tray");
+    } catch (err: any) {
+      Alert.alert("Error", err?.message ?? String(err));
+    } finally {
+      setIsTextLoading(false);
+    }
+  };
+
+  const handleMagicScan = () => {
+    Alert.alert("Magic Scan", "Choose a source", [
+      {
+        text: "Camera",
+        onPress: () => pickImage("camera"),
+      },
+      {
+        text: "Photo Library",
+        onPress: () => pickImage("library"),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const pickImage = async (source: "camera" | "library") => {
+    let result;
+    if (source === "camera") {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Camera access is required to scan ingredients.");
+        return;
+      }
+      result = await ImagePicker.launchCameraAsync({
+        base64: true,
+        quality: 0.7,
+        mediaTypes: ["images"],
+      });
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Photo library access is required.");
+        return;
+      }
+      result = await ImagePicker.launchImageLibraryAsync({
+        base64: true,
+        quality: 0.7,
+        mediaTypes: ["images"],
+      });
+    }
+
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    const { base64, mimeType } = result.assets[0];
+    setIsScanLoading(true);
+    try {
+      const ingredients = await extractIngredientsFromImage(
+        base64!,
+        (mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif") ?? "image/jpeg"
+      );
+      setTrayIngredients(ingredients);
+      router.push("/ingredient-tray");
+    } catch {
+      Alert.alert("Error", "Could not detect ingredients from image. Please try again.");
+    } finally {
+      setIsScanLoading(false);
+    }
+  };
+
+  const handleVoice = async () => {
+    if (!ExpoSpeechRecognitionModule) {
+      Alert.alert("Voice Input", "Voice input requires a native build. Run `npx expo run:ios` to enable it.");
+      return;
+    }
+
+    if (isListening) {
+      ExpoSpeechRecognitionModule.stop();
+      return;
+    }
+
+    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!granted) {
+      Alert.alert("Permission Denied", "Microphone access is required for voice input.");
+      return;
+    }
+
+    transcriptRef.current = "";
+    setIsListening(true);
+    ExpoSpeechRecognitionModule.start({
+      lang: "en-US",
+      interimResults: false,
+      maxAlternatives: 1,
+    });
+  };
 
   return (
     <View className="flex-1 bg-background">
@@ -88,9 +243,7 @@ export default function HomeScreen() {
               Tshegofatso 👨‍🍳
             </Text>
           </View>
-          <View
-            style={styles.avatarContainer}
-          >
+          <View style={styles.avatarContainer}>
             <Image
               source={{
                 uri: "https://lh3.googleusercontent.com/a/ACg8ocKqtIkGkSMwNo8noobbQHviRPKyY_ZVEQMrnjVJvhb__3E2Udw_=s96-c",
@@ -109,11 +262,11 @@ export default function HomeScreen() {
           className="mb-5 flex-grow-0"
         >
           {DIET_FILTERS.map((filter) => {
-            const isActive = activeFilter === filter.id;
+            const isActive = activeDietFilter === filter.id;
             return (
               <Pressable
                 key={filter.id}
-                onPress={() => setActiveFilter(filter.id)}
+                onPress={() => setActiveDietFilter(filter.id as any)}
                 style={[
                   styles.filterPill,
                   isActive ? styles.filterPillActive : styles.filterPillInactive,
@@ -148,21 +301,35 @@ export default function HomeScreen() {
               onChangeText={setIngredientInput}
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
+              onSubmitEditing={handleTextSubmit}
               placeholder="Type ingredients (e.g. eggs, kale...)"
               placeholderTextColor={COLORS.mutedForeground}
+              returnKeyType="send"
               style={[
                 styles.input,
                 inputFocused && styles.inputFocused,
-                { fontFamily: "NunitoSans_600SemiBold" },
+                { fontFamily: "NunitoSans_600SemiBold", paddingRight: 56 },
               ]}
             />
+            {/* Send button */}
+            <Pressable
+              onPress={handleTextSubmit}
+              style={[styles.sendButton, { opacity: ingredientInput.trim() ? 1 : 0.4 }]}
+              disabled={!ingredientInput.trim() || isTextLoading}
+            >
+              {isTextLoading ? (
+                <ActivityIndicator size="small" color={COLORS.primaryForeground} />
+              ) : (
+                <Icon icon="solar:send-bold" size={16} color={COLORS.primaryForeground} />
+              )}
+            </Pressable>
           </View>
         </View>
 
-        {/* Magic Scan Button — fills remaining space */}
+        {/* Magic Scan Button */}
         <View className="flex-1 items-center justify-center px-6 my-2">
           <Pressable
-            onPress={() => router.push("/ingredient-tray")}
+            onPress={handleMagicScan}
             style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
           >
             <LinearGradient
@@ -171,7 +338,6 @@ export default function HomeScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.scanButton}
             >
-              {/* Inner circle */}
               <View style={styles.scanIconCircle}>
                 <Icon icon="solar:scanner-2-bold-duotone" size={48} color={COLORS.primaryForeground} />
               </View>
@@ -209,7 +375,7 @@ export default function HomeScreen() {
             >
               Recent Scans
             </Text>
-            <Pressable>
+            <Pressable onPress={() => router.push("/saved")}>
               <Text
                 style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 14, color: COLORS.primary }}
               >
@@ -262,14 +428,28 @@ export default function HomeScreen() {
         </View>
       </SafeAreaView>
 
-      {/* Voice FAB — floating above all content */}
+      {/* Voice FAB */}
       <View style={styles.fabContainer} pointerEvents="box-none">
         <Pressable
-          style={({ pressed }) => [styles.fab, { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.93 : 1 }] }]}
+          onPress={handleVoice}
+          style={({ pressed }) => [
+            styles.fab,
+            isListening && styles.fabListening,
+            { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.93 : 1 }] },
+          ]}
         >
-          <Icon icon="solar:microphone-3-bold" size={26} color={COLORS.background} />
+          <Icon
+            icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
+            size={26}
+            color={COLORS.background}
+          />
         </Pressable>
       </View>
+
+      <LoadingOverlay
+        visible={isScanLoading || isVoiceLoading}
+        message={isScanLoading ? "Scanning ingredients..." : "Processing voice..."}
+      />
     </View>
   );
 }
@@ -344,6 +524,16 @@ const styles = StyleSheet.create({
   inputFocused: {
     borderColor: "rgba(138,154,134,0.3)",
     backgroundColor: "#FFFFFF",
+  },
+  sendButton: {
+    position: "absolute",
+    right: 6,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#8A9A86",
+    alignItems: "center",
+    justifyContent: "center",
   },
   scanButton: {
     width: 256,
@@ -425,5 +615,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 16,
     elevation: 8,
+  },
+  fabListening: {
+    backgroundColor: "#8A9A86",
+    shadowColor: "#8A9A86",
+    shadowOpacity: 0.4,
   },
 });

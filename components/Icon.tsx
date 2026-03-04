@@ -33,6 +33,14 @@ const ICON_MAP: Record<string, IconMapping> = {
   "solar:heart-bold": { set: "Ionicons", name: "heart" },
   "solar:heart-outline": { set: "Ionicons", name: "heart-outline" },
   "solar:play-circle-bold": { set: "Ionicons", name: "play-circle" },
+  "solar:alt-arrow-right-linear": { set: "Ionicons", name: "arrow-forward" },
+  "solar:send-bold": { set: "Ionicons", name: "send" },
+  "solar:bookmark-bold": { set: "Ionicons", name: "bookmark" },
+  "solar:bookmark-outline": { set: "Ionicons", name: "bookmark-outline" },
+  "solar:history-bold": { set: "MaterialCommunityIcons", name: "history" },
+  "solar:camera-bold": { set: "Ionicons", name: "camera" },
+  "solar:chef-hat-bold": { set: "MaterialCommunityIcons", name: "chef-hat" },
+  "solar:lightbulb-bold": { set: "Ionicons", name: "bulb" },
 };
 
 export function Icon({ icon, size = 20, color = "#000" }: IconProps) {

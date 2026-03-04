@@ -4,14 +4,14 @@ import {
   Text,
   ScrollView,
   Pressable,
-  Image,
   StyleSheet,
   useWindowDimensions,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
+import { useAppContext } from "@/context/AppContext";
 
 const COLORS = {
   background: "#F9F6F0",
@@ -22,102 +22,123 @@ const COLORS = {
   muted: "#E8E6E1",
   mutedForeground: "#7B8579",
   border: "#E2DFD8",
-  chart2: "#C97A7E",
-  chart3: "#DDA77B",
-};
-
-const RECIPE = {
-  id: "1",
-  title: "Sage & Garlic Roast Chicken with Wilted Spinach",
-  image:
-    "https://ggrhecslgdflloszjkwl.supabase.co/storage/v1/object/public/user-assets/IXNk5Fj0Ara/components/q7sfF3HrkRT.png",
-  badges: [
-    { label: "Recommended", color: COLORS.primary, bg: "rgba(138,154,134,0.12)" },
-    { label: "Chef's Choice", color: COLORS.chart3, bg: "rgba(221,167,123,0.12)" },
-  ],
-  stats: [
-    { icon: "solar:clock-circle-bold", iconColor: COLORS.primary, label: "Time", value: "25 min" },
-    { icon: "solar:fire-bold", iconColor: COLORS.chart2, label: "Calories", value: "420 kcal" },
-    { icon: "solar:leaf-bold", iconColor: COLORS.primary, label: "Match", value: "Low-Fat" },
-  ],
-  ingredients: [
-    "1 Chicken Breast",
-    "2 Cups Spinach",
-    "8 Cherry Tomatoes",
-    "1/4 Red Onion",
-    "2 Garlic Cloves",
-  ],
-  steps: [
-    "Season the chicken breast with salt, pepper, and minced garlic. Sear in a hot pan for 6-8 minutes per side until golden brown and cooked through.",
-    "In the same pan, toss in the sliced red onion and cherry tomatoes. Sauté for 3 minutes until the tomatoes begin to blister.",
-    "Add the fresh spinach and a splash of water or broth. Cover for 1 minute until wilted. Serve immediately with the rested chicken.",
-  ],
 };
 
 export default function RecipeCardScreen() {
-  const [isFavorite, setIsFavorite] = useState(false);
+  const { id, sessionId } = useLocalSearchParams<{
+    id: string;
+    sessionId: string;
+  }>();
+  const { activeSession, sessions, toggleSaved, isRecipeSaved } =
+    useAppContext();
   const [currentStep, setCurrentStep] = useState<number | null>(null);
   const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
-  const heroHeight = screenHeight * 0.45;
+  // Resolve recipe: prefer in-memory activeSession, fall back to persisted sessions
+  const session =
+    activeSession?.id === sessionId
+      ? activeSession
+      : sessions.find((s) => s.id === sessionId);
+  const recipe = session?.recipes.find((r) => r.id === id);
+
+  const isSaved = recipe ? isRecipeSaved(recipe.id) : false;
+  const heroHeight = screenHeight * 0.42;
+
+  const handleFavoriteToggle = () => {
+    if (!recipe || !session) return;
+    toggleSaved(recipe.id, session.id);
+  };
+
+  if (!recipe) {
+    return (
+      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+        <SafeAreaView
+          style={{
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 32,
+          }}
+        >
+          <Icon icon="solar:chef-hat-bold" size={48} color={COLORS.mutedForeground} />
+          <Text style={styles.notFoundTitle}>Recipe not found</Text>
+          <Text style={styles.notFoundSubtext}>
+            This recipe may no longer be available.
+          </Text>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <Text style={styles.backButtonText}>Go Back</Text>
+          </Pressable>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
-    <View className="flex-1 bg-background">
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <ScrollView
         style={{ flex: 1 }}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
       >
-        {/* Hero Image Section */}
+        {/* Hero gradient section */}
         <View style={{ height: heroHeight, position: "relative" }}>
-          <Image
-            source={{ uri: RECIPE.image }}
+          <LinearGradient
+            colors={recipe.gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
             style={{ width: "100%", height: "100%" }}
-            resizeMode="cover"
           />
 
-          {/* Gradient overlay */}
+          {/* Fade to background at bottom */}
           <LinearGradient
             colors={["transparent", "transparent", COLORS.background]}
             locations={[0, 0.5, 1]}
             style={StyleSheet.absoluteFillObject}
           />
 
-          {/* Top nav buttons */}
-          <View
-            style={[styles.heroNav, { top: insets.top + 12 }]}
-          >
+          {/* Top nav */}
+          <View style={[styles.heroNav, { top: insets.top + 12 }]}>
             <Pressable
               onPress={() => router.back()}
               style={({ pressed }) => [
                 styles.heroButton,
-                { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] },
-              ]}
-            >
-              <Icon icon="solar:alt-arrow-left-linear" size={22} color="#FFFFFF" />
-            </Pressable>
-
-            <Pressable
-              onPress={() => setIsFavorite((prev) => !prev)}
-              style={({ pressed }) => [
-                styles.heroButton,
-                { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] },
+                {
+                  opacity: pressed ? 0.7 : 1,
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                },
               ]}
             >
               <Icon
-                icon={isFavorite ? "solar:heart-bold" : "solar:heart-outline"}
+                icon="solar:alt-arrow-left-linear"
                 size={22}
-                color={isFavorite ? "#C97A7E" : "#FFFFFF"}
+                color="#FFFFFF"
+              />
+            </Pressable>
+
+            <Pressable
+              onPress={handleFavoriteToggle}
+              style={({ pressed }) => [
+                styles.heroButton,
+                {
+                  opacity: pressed ? 0.7 : 1,
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                },
+              ]}
+            >
+              <Icon
+                icon={isSaved ? "solar:bookmark-bold" : "solar:bookmark-outline"}
+                size={22}
+                color="#FFFFFF"
               />
             </Pressable>
           </View>
 
-          {/* Recipe info card overlaid at bottom of hero */}
+          {/* Recipe info card */}
           <View style={styles.recipeInfoCard}>
             {/* Badges */}
             <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
-              {RECIPE.badges.map((badge) => (
+              {recipe.badges.map((badge) => (
                 <View
                   key={badge.label}
                   style={[styles.pill, { backgroundColor: badge.bg }]}
@@ -127,28 +148,35 @@ export default function RecipeCardScreen() {
                   </Text>
                 </View>
               ))}
+              {isSaved && (
+                <View
+                  style={[
+                    styles.pill,
+                    { backgroundColor: "rgba(138,154,134,0.15)" },
+                  ]}
+                >
+                  <Text style={[styles.pillText, { color: COLORS.primary }]}>
+                    Saved
+                  </Text>
+                </View>
+              )}
             </View>
 
             {/* Title */}
-            <Text style={styles.recipeTitle}>{RECIPE.title}</Text>
+            <Text style={styles.recipeTitle}>{recipe.title}</Text>
 
             {/* Stats row */}
             <View style={styles.statsRow}>
-              {RECIPE.stats.map((stat, idx) => (
+              {recipe.stats.map((stat, idx) => (
                 <React.Fragment key={stat.label}>
-                  {idx > 0 && (
-                    <View
-                      style={{
-                        width: 1,
-                        height: 32,
-                        backgroundColor: COLORS.border,
-                        opacity: 0.5,
-                      }}
-                    />
-                  )}
+                  {idx > 0 && <View style={styles.statDivider} />}
                   <View style={styles.statItem}>
                     <View style={styles.statIcon}>
-                      <Icon icon={stat.icon} size={20} color={stat.iconColor} />
+                      <Icon
+                        icon={stat.icon}
+                        size={18}
+                        color={stat.iconColor}
+                      />
                     </View>
                     <View>
                       <Text style={styles.statLabel}>{stat.label}</Text>
@@ -163,14 +191,14 @@ export default function RecipeCardScreen() {
 
         {/* Main Content */}
         <View style={{ paddingHorizontal: 28, marginTop: 24 }}>
-          {/* Ingredients Section */}
+          {/* Ingredients */}
           <View style={{ marginBottom: 32 }}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Ingredients</Text>
               <View style={styles.sectionDot} />
             </View>
             <View style={styles.chipWrap}>
-              {RECIPE.ingredients.map((ingredient) => (
+              {recipe.ingredients.map((ingredient) => (
                 <View key={ingredient} style={styles.chip}>
                   <Text style={styles.chipText}>{ingredient}</Text>
                 </View>
@@ -178,22 +206,24 @@ export default function RecipeCardScreen() {
             </View>
           </View>
 
-          {/* Preparation Section */}
+          {/* Preparation */}
           <View style={{ marginBottom: 16 }}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Preparation</Text>
               <View style={styles.sectionDot} />
             </View>
 
-            <View style={{ gap: 28 }}>
-              {RECIPE.steps.map((step, index) => {
+            <View style={{ gap: 20 }}>
+              {recipe.steps.map((step, index) => {
                 const stepNumber = index + 1;
                 const isActive = currentStep === stepNumber;
                 return (
                   <Pressable
                     key={stepNumber}
                     onPress={() =>
-                      setCurrentStep((prev) => (prev === stepNumber ? null : stepNumber))
+                      setCurrentStep((prev) =>
+                        prev === stepNumber ? null : stepNumber
+                      )
                     }
                     style={[
                       styles.stepRow,
@@ -215,14 +245,7 @@ export default function RecipeCardScreen() {
                         {stepNumber}
                       </Text>
                     </View>
-                    <Text
-                      style={[
-                        styles.stepText,
-                        isActive && { color: COLORS.foreground },
-                      ]}
-                    >
-                      {step}
-                    </Text>
+                    <Text style={styles.stepText}>{step}</Text>
                   </Pressable>
                 );
               })}
@@ -230,16 +253,40 @@ export default function RecipeCardScreen() {
           </View>
         </View>
 
-        {/* Start Step-by-Step CTA */}
-        <View style={{ marginTop: 32, paddingHorizontal: 24 }}>
+        {/* Save + Start CTAs */}
+        <View style={{ marginTop: 32, paddingHorizontal: 24, gap: 12 }}>
+          <Pressable
+            onPress={handleFavoriteToggle}
+            style={({ pressed }) => [
+              styles.saveButton,
+              { opacity: pressed ? 0.9 : 1 },
+            ]}
+          >
+            <Icon
+              icon={isSaved ? "solar:bookmark-bold" : "solar:bookmark-outline"}
+              size={20}
+              color={COLORS.primary}
+            />
+            <Text style={styles.saveButtonText}>
+              {isSaved ? "Saved to My Recipes" : "Save Recipe"}
+            </Text>
+          </Pressable>
+
           <Pressable
             onPress={() => setCurrentStep(1)}
             style={({ pressed }) => [
               styles.ctaButton,
-              { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
+              {
+                opacity: pressed ? 0.9 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              },
             ]}
           >
-            <Icon icon="solar:play-circle-bold" size={24} color={COLORS.background} />
+            <Icon
+              icon="solar:play-circle-bold"
+              size={24}
+              color={COLORS.background}
+            />
             <Text style={styles.ctaButtonText}>Start Step-by-Step</Text>
           </Pressable>
         </View>
@@ -296,9 +343,9 @@ const styles = StyleSheet.create({
   },
   recipeTitle: {
     fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 19,
+    fontSize: 18,
     color: "#2C332A",
-    lineHeight: 26,
+    lineHeight: 25,
     marginBottom: 14,
   },
   statsRow: {
@@ -309,6 +356,12 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "rgba(226,223,216,0.6)",
   },
+  statDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: "#E2DFD8",
+    opacity: 0.5,
+  },
   statItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -317,9 +370,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   statIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: "#E8E6E1",
     alignItems: "center",
     justifyContent: "center",
@@ -335,9 +388,9 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 13,
+    fontSize: 12,
     color: "#2C332A",
-    lineHeight: 16,
+    lineHeight: 15,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -381,7 +434,7 @@ const styles = StyleSheet.create({
   },
   stepRow: {
     flexDirection: "row",
-    gap: 16,
+    gap: 14,
     alignItems: "flex-start",
     padding: 12,
     borderRadius: 16,
@@ -390,9 +443,9 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(138,154,134,0.08)",
   },
   stepBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: "#8A9A86",
     alignItems: "center",
     justifyContent: "center",
@@ -410,7 +463,7 @@ const styles = StyleSheet.create({
   },
   stepNumber: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 14,
+    fontSize: 13,
     color: "#FFFFFF",
   },
   stepText: {
@@ -419,7 +472,24 @@ const styles = StyleSheet.create({
     color: "rgba(44,51,42,0.85)",
     lineHeight: 22,
     flex: 1,
-    paddingTop: 4,
+    paddingTop: 3,
+  },
+  saveButton: {
+    width: "100%",
+    height: 52,
+    borderRadius: 20,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1.5,
+    borderColor: "#8A9A86",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  saveButtonText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 15,
+    color: "#8A9A86",
   },
   ctaButton: {
     width: "100%",
@@ -440,5 +510,31 @@ const styles = StyleSheet.create({
     fontFamily: "NunitoSans_700Bold",
     fontSize: 17,
     color: "#F9F6F0",
+  },
+  notFoundTitle: {
+    fontFamily: "NunitoSans_800ExtraBold",
+    fontSize: 20,
+    color: "#2C332A",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  notFoundSubtext: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 14,
+    color: "#7B8579",
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  backButton: {
+    marginTop: 24,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 999,
+    backgroundColor: "#8A9A86",
+  },
+  backButtonText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 15,
+    color: "#FFFFFF",
   },
 });
