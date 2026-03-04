@@ -29,7 +29,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [savedRecipeIds, setSavedRecipeIds] = useState<SavedRecipeEntry[]>([]);
   const [trayIngredients, setTrayIngredients] = useState<Ingredient[]>([]);
   const [activeDietFilter, setActiveDietFilter] =
-    useState<DietFilter>("low-fat");
+    useState<DietFilter | null>(null);
 
   // Hydrate from AsyncStorage on mount
   useEffect(() => {

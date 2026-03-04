@@ -124,10 +124,12 @@ const GRADIENT_PALETTE: Array<[string, string]> = [
 
 export async function generateRecipes(
   ingredients: Ingredient[],
-  dietFilter: DietFilter
+  dietFilter: DietFilter | null
 ): Promise<Recipe[]> {
   const ingredientNames = ingredients.map((i) => i.name).join(", ");
-  const dietInstruction = DIET_LABEL[dietFilter];
+  const dietInstruction = dietFilter
+    ? DIET_LABEL[dietFilter]
+    : "No specific diet restriction — just make them delicious and creative.";
 
   const response = await client.messages.create({
     model: MODEL,

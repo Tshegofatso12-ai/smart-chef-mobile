@@ -25,6 +25,7 @@ try {
 } catch {
   // running in Expo Go — voice input disabled
 }
+
 import { Icon } from "@/components/Icon";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useAppContext } from "@/context/AppContext";
@@ -32,6 +33,7 @@ import {
   extractIngredientsFromText,
   extractIngredientsFromImage,
 } from "@/lib/claude";
+import type { DietFilter, Recipe } from "@/types";
 
 const COLORS = {
   background: "#F9F6F0",
@@ -47,38 +49,12 @@ const COLORS = {
   chart3: "#DDA77B",
 };
 
-type DietFilter = { id: string; label: string; icon: string; iconColor: string };
+type FilterDef = { id: DietFilter; label: string; icon: string; activeColor: string };
 
-const DIET_FILTERS: DietFilter[] = [
-  { id: "low-fat", label: "Low-Fat", icon: "solar:leaf-bold", iconColor: COLORS.primaryForeground },
-  { id: "low-carb", label: "Low-Carb", icon: "solar:bone-bold", iconColor: COLORS.chart3 },
-  { id: "high-protein", label: "High-Protein", icon: "solar:fire-bold", iconColor: COLORS.chart2 },
-];
-
-type RecentScan = { id: string; name: string; calories: number; image: string };
-
-const RECENT_SCANS: RecentScan[] = [
-  {
-    id: "1",
-    name: "Avocado Half",
-    calories: 160,
-    image:
-      "https://ggrhecslgdflloszjkwl.supabase.co/storage/v1/object/public/user-assets/IXNk5Fj0Ara/components/UnViRxuKCIA.png",
-  },
-  {
-    id: "2",
-    name: "Salmon Fillet",
-    calories: 208,
-    image:
-      "https://ggrhecslgdflloszjkwl.supabase.co/storage/v1/object/public/user-assets/IXNk5Fj0Ara/components/sj6XeY4B2qx.png",
-  },
-  {
-    id: "3",
-    name: "Fresh Broccoli",
-    calories: 55,
-    image:
-      "https://ggrhecslgdflloszjkwl.supabase.co/storage/v1/object/public/user-assets/IXNk5Fj0Ara/components/qDi8Mwgq0ou.png",
-  },
+const DIET_FILTERS: FilterDef[] = [
+  { id: "low-fat", label: "Low-Fat", icon: "solar:leaf-bold", activeColor: COLORS.primary },
+  { id: "low-carb", label: "Low-Carb", icon: "solar:bone-bold", activeColor: COLORS.chart3 },
+  { id: "high-protein", label: "High-Protein", icon: "solar:fire-bold", activeColor: COLORS.chart2 },
 ];
 
 function getGreeting(): string {
@@ -88,28 +64,72 @@ function getGreeting(): string {
   return "Good Evening,";
 }
 
+function SavedRecipeRow({ recipe, sessionId }: { recipe: Recipe; sessionId: string }) {
+  return (
+    <Pressable
+      onPress={() => router.push({ pathname: "/recipe/[id]", params: { id: recipe.id, sessionId } })}
+      style={({ pressed }) => [styles.savedRow, { opacity: pressed ? 0.85 : 1 }]}
+    >
+      <LinearGradient
+        colors={recipe.gradientColors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.savedRowSwatch}
+      />
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={styles.savedRowTitle} numberOfLines={1}>{recipe.title}</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <Text style={styles.savedRowMeta}>{recipe.cookTime}</Text>
+          <Text style={styles.savedRowMeta}>·</Text>
+          <Text style={styles.savedRowMeta}>{recipe.calories}</Text>
+        </View>
+      </View>
+      <Icon icon="solar:alt-arrow-right-linear" size={16} color={COLORS.mutedForeground} />
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
-  const { activeDietFilter, setActiveDietFilter, setTrayIngredients } = useAppContext();
+  const {
+    activeDietFilter,
+    setActiveDietFilter,
+    setTrayIngredients,
+    savedRecipeIds,
+    sessions,
+  } = useAppContext();
+
   const [ingredientInput, setIngredientInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [isTextLoading, setIsTextLoading] = useState(false);
   const [isScanLoading, setIsScanLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isVoiceLoading, setIsVoiceLoading] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState("");
   const transcriptRef = useRef("");
 
-  // Speech recognition events
+  // ─── Saved recipes (last 4) ────────────────────────────────────────────────
+  const savedEntries = savedRecipeIds
+    .slice(0, 4)
+    .map((entry) => {
+      const session = sessions.find((s) => s.id === entry.sessionId);
+      const recipe = session?.recipes.find((r) => r.id === entry.recipeId);
+      return recipe && session ? { recipe, session } : null;
+    })
+    .filter((x): x is { recipe: Recipe; session: any } => x !== null);
+
+  // ─── Speech recognition events ────────────────────────────────────────────
   useSpeechRecognitionEvent("result", (event) => {
-    const transcript = event.results[0]?.transcript ?? "";
-    transcriptRef.current = transcript;
+    const t = event.results[0]?.transcript ?? "";
+    transcriptRef.current = t;
+    setLiveTranscript(t);
   });
 
   useSpeechRecognitionEvent("end", async () => {
     setIsListening(false);
+    setLiveTranscript("");
     const transcript = transcriptRef.current;
     transcriptRef.current = "";
     if (!transcript) return;
-
     setIsVoiceLoading(true);
     try {
       const ingredients = await extractIngredientsFromText(transcript);
@@ -124,13 +144,14 @@ export default function HomeScreen() {
 
   useSpeechRecognitionEvent("error", () => {
     setIsListening(false);
+    setLiveTranscript("");
     Alert.alert("Voice Error", "Speech recognition failed. Please try again.");
   });
 
+  // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleTextSubmit = async () => {
     const text = ingredientInput.trim();
     if (!text) return;
-
     setIsTextLoading(true);
     try {
       const ingredients = await extractIngredientsFromText(text);
@@ -146,14 +167,8 @@ export default function HomeScreen() {
 
   const handleMagicScan = () => {
     Alert.alert("Magic Scan", "Choose a source", [
-      {
-        text: "Camera",
-        onPress: () => pickImage("camera"),
-      },
-      {
-        text: "Photo Library",
-        onPress: () => pickImage("library"),
-      },
+      { text: "Camera", onPress: () => pickImage("camera") },
+      { text: "Photo Library", onPress: () => pickImage("library") },
       { text: "Cancel", style: "cancel" },
     ]);
   };
@@ -166,32 +181,22 @@ export default function HomeScreen() {
         Alert.alert("Permission Denied", "Camera access is required to scan ingredients.");
         return;
       }
-      result = await ImagePicker.launchCameraAsync({
-        base64: true,
-        quality: 0.7,
-        mediaTypes: ["images"],
-      });
+      result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.7, mediaTypes: ["images"] });
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Permission Denied", "Photo library access is required.");
         return;
       }
-      result = await ImagePicker.launchImageLibraryAsync({
-        base64: true,
-        quality: 0.7,
-        mediaTypes: ["images"],
-      });
+      result = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7, mediaTypes: ["images"] });
     }
-
     if (result.canceled || !result.assets[0]?.base64) return;
-
     const { base64, mimeType } = result.assets[0];
     setIsScanLoading(true);
     try {
       const ingredients = await extractIngredientsFromImage(
         base64!,
-        (mimeType as "image/jpeg" | "image/png" | "image/webp" | "image/gif") ?? "image/jpeg"
+        (mimeType === "image/png" ? "image/png" : "image/jpeg")
       );
       setTrayIngredients(ingredients);
       router.push("/ingredient-tray");
@@ -207,91 +212,67 @@ export default function HomeScreen() {
       Alert.alert("Voice Input", "Voice input requires a native build. Run `npx expo run:ios` to enable it.");
       return;
     }
-
-    if (isListening) {
-      ExpoSpeechRecognitionModule.stop();
-      return;
-    }
-
+    if (isListening) { ExpoSpeechRecognitionModule.stop(); return; }
     const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!granted) {
-      Alert.alert("Permission Denied", "Microphone access is required for voice input.");
-      return;
-    }
-
+    if (!granted) { Alert.alert("Permission Denied", "Microphone access is required for voice input."); return; }
     transcriptRef.current = "";
     setIsListening(true);
-    ExpoSpeechRecognitionModule.start({
-      lang: "en-US",
-      interimResults: false,
-      maxAlternatives: 1,
-    });
+    ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: false, maxAlternatives: 1 });
   };
 
   return (
-    <View className="flex-1 bg-background">
-      <SafeAreaView className="flex-1">
-        {/* Header */}
-        <View className="px-6 pt-2 pb-2 flex-row items-center justify-between">
+    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+      <SafeAreaView style={{ flex: 1 }}>
+
+        {/* ── Header ── */}
+        <View style={styles.header}>
           <View>
-            <Text className="text-sm font-semibold text-muted-foreground mb-0.5">
-              {getGreeting()}
-            </Text>
-            <Text
-              style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 24, color: COLORS.foreground }}
-            >
-              Tshegofatso 👨‍🍳
-            </Text>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.name}>Tshegofatso 👨‍🍳</Text>
           </View>
           <View style={styles.avatarContainer}>
             <Image
-              source={{
-                uri: "https://lh3.googleusercontent.com/a/ACg8ocKqtIkGkSMwNo8noobbQHviRPKyY_ZVEQMrnjVJvhb__3E2Udw_=s96-c",
-              }}
+              source={{ uri: "https://lh3.googleusercontent.com/a/ACg8ocKqtIkGkSMwNo8noobbQHviRPKyY_ZVEQMrnjVJvhb__3E2Udw_=s96-c" }}
               style={{ width: "100%", height: "100%" }}
               resizeMode="cover"
             />
           </View>
         </View>
 
-        {/* Diet Filters */}
+        {/* ── Diet Filters ── */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 24, gap: 12, paddingBottom: 8 }}
-          className="mb-5 flex-grow-0"
+          contentContainerStyle={{ paddingHorizontal: 24, gap: 10, paddingBottom: 8 }}
+          style={{ flexGrow: 0, marginBottom: 16 }}
         >
           {DIET_FILTERS.map((filter) => {
             const isActive = activeDietFilter === filter.id;
             return (
               <Pressable
                 key={filter.id}
-                onPress={() => setActiveDietFilter(filter.id as any)}
+                onPress={() => setActiveDietFilter(isActive ? null : filter.id)}
                 style={[
                   styles.filterPill,
-                  isActive ? styles.filterPillActive : styles.filterPillInactive,
+                  isActive
+                    ? [styles.filterPillActive, { backgroundColor: filter.activeColor, shadowColor: filter.activeColor }]
+                    : styles.filterPillInactive,
                 ]}
               >
-                <Icon
-                  icon={filter.icon}
-                  size={18}
-                  color={isActive ? COLORS.primaryForeground : filter.iconColor}
-                />
-                <Text
-                  style={[
-                    styles.filterLabel,
-                    { color: isActive ? COLORS.primaryForeground : COLORS.foreground },
-                  ]}
-                >
+                <Icon icon={filter.icon} size={16} color={isActive ? COLORS.primaryForeground : COLORS.mutedForeground} />
+                <Text style={[styles.filterLabel, { color: isActive ? COLORS.primaryForeground : COLORS.foreground }]}>
                   {filter.label}
                 </Text>
+                {isActive && (
+                  <Icon icon="hugeicons:cancel-01" size={12} color="rgba(255,255,255,0.7)" />
+                )}
               </Pressable>
             );
           })}
         </ScrollView>
 
-        {/* Ingredient Input */}
-        <View className="px-6 mb-4">
+        {/* ── Text Input ── */}
+        <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
           <View style={styles.inputWrapper}>
             <View style={styles.inputIcon}>
               <Icon icon="solar:pen-new-square-bold-duotone" size={20} color={COLORS.primary} />
@@ -305,146 +286,122 @@ export default function HomeScreen() {
               placeholder="Type ingredients (e.g. eggs, kale...)"
               placeholderTextColor={COLORS.mutedForeground}
               returnKeyType="send"
-              style={[
-                styles.input,
-                inputFocused && styles.inputFocused,
-                { fontFamily: "NunitoSans_600SemiBold", paddingRight: 56 },
-              ]}
+              style={[styles.input, inputFocused && styles.inputFocused, { fontFamily: "NunitoSans_600SemiBold", paddingRight: 56 }]}
             />
-            {/* Send button */}
             <Pressable
               onPress={handleTextSubmit}
               style={[styles.sendButton, { opacity: ingredientInput.trim() ? 1 : 0.4 }]}
               disabled={!ingredientInput.trim() || isTextLoading}
             >
-              {isTextLoading ? (
-                <ActivityIndicator size="small" color={COLORS.primaryForeground} />
-              ) : (
-                <Icon icon="solar:send-bold" size={16} color={COLORS.primaryForeground} />
-              )}
+              {isTextLoading
+                ? <ActivityIndicator size="small" color={COLORS.primaryForeground} />
+                : <Icon icon="solar:send-bold" size={16} color={COLORS.primaryForeground} />
+              }
             </Pressable>
           </View>
         </View>
 
-        {/* Magic Scan Button */}
-        <View className="flex-1 items-center justify-center px-6 my-2">
-          <Pressable
-            onPress={handleMagicScan}
-            style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
-          >
-            <LinearGradient
-              colors={["#9EAE9A", "#8A9A86", "#758471"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.scanButton}
-            >
-              <View style={styles.scanIconCircle}>
-                <Icon icon="solar:scanner-2-bold-duotone" size={48} color={COLORS.primaryForeground} />
-              </View>
-              <View className="items-center">
-                <Text
-                  style={{
-                    fontFamily: "NunitoSans_800ExtraBold",
-                    fontSize: 22,
-                    color: COLORS.primaryForeground,
-                    letterSpacing: -0.5,
-                  }}
-                >
-                  Magic Scan
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: "NunitoSans_400Regular",
-                    fontSize: 13,
-                    color: "rgba(255,255,255,0.8)",
-                    marginTop: 4,
-                  }}
-                >
-                  Tap to scan ingredients
-                </Text>
-              </View>
-            </LinearGradient>
-          </Pressable>
-        </View>
-
-        {/* Recent Scans */}
-        <View className="mb-2">
-          <View className="px-6 flex-row items-center justify-between mb-3">
-            <Text
-              style={{ fontFamily: "NunitoSans_700Bold", fontSize: 17, color: COLORS.foreground }}
-            >
-              Recent Scans
-            </Text>
-            <Pressable onPress={() => router.push("/saved")}>
-              <Text
-                style={{ fontFamily: "NunitoSans_600SemiBold", fontSize: 14, color: COLORS.primary }}
-              >
-                View All
-              </Text>
-            </Pressable>
-          </View>
-
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 24, gap: 16, paddingBottom: 24 }}
-          >
-            {RECENT_SCANS.map((scan) => (
-              <View key={scan.id} style={styles.scanCard}>
-                <View style={styles.scanImageContainer}>
-                  <Image
-                    source={{ uri: scan.image }}
-                    style={{ width: "100%", height: "100%" }}
-                    resizeMode="cover"
-                  />
-                  <View style={styles.checkBadge}>
-                    <Icon icon="solar:check-circle-bold" size={14} color={COLORS.primary} />
-                  </View>
-                </View>
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    fontFamily: "NunitoSans_600SemiBold",
-                    fontSize: 13,
-                    color: COLORS.foreground,
-                    marginTop: 2,
-                  }}
-                >
-                  {scan.name}
-                </Text>
-                <Text
-                  style={{
-                    fontFamily: "NunitoSans_400Regular",
-                    fontSize: 11,
-                    color: COLORS.mutedForeground,
-                    marginTop: 2,
-                  }}
-                >
-                  {scan.calories} kcal
-                </Text>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      </SafeAreaView>
-
-      {/* Voice FAB */}
-      <View style={styles.fabContainer} pointerEvents="box-none">
-        <Pressable
-          onPress={handleVoice}
-          style={({ pressed }) => [
-            styles.fab,
-            isListening && styles.fabListening,
-            { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.93 : 1 }] },
-          ]}
+        {/* ── Scrollable content ── */}
+        <ScrollView
+          style={{ flex: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 100 }}
         >
-          <Icon
-            icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
-            size={26}
-            color={COLORS.background}
-          />
-        </Pressable>
-      </View>
+          {/* Magic Scan Button */}
+          <View style={{ alignItems: "center", paddingVertical: 8 }}>
+            <Pressable
+              onPress={handleMagicScan}
+              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
+            >
+              <LinearGradient
+                colors={["#9EAE9A", "#8A9A86", "#758471"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.scanButton}
+              >
+                <View style={styles.scanIconCircle}>
+                  <Icon icon="solar:scanner-2-bold-duotone" size={44} color={COLORS.primaryForeground} />
+                </View>
+                <View style={{ alignItems: "center" }}>
+                  <Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: COLORS.primaryForeground, letterSpacing: -0.5 }}>
+                    Magic Scan
+                  </Text>
+                  <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
+                    Tap to scan ingredients
+                  </Text>
+                </View>
+              </LinearGradient>
+            </Pressable>
+          </View>
+
+          {/* ── Voice Input ── */}
+          <View style={styles.section}>
+            <View style={styles.voiceCard}>
+              <Pressable
+                onPress={handleVoice}
+                style={({ pressed }) => [
+                  styles.voiceMicButton,
+                  isListening && styles.voiceMicButtonActive,
+                  { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] },
+                ]}
+              >
+                {isVoiceLoading ? (
+                  <ActivityIndicator size="large" color={COLORS.primaryForeground} />
+                ) : (
+                  <Icon
+                    icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
+                    size={32}
+                    color={isListening ? COLORS.primaryForeground : COLORS.foreground}
+                  />
+                )}
+              </Pressable>
+
+              <View style={{ flex: 1 }}>
+                <Text style={styles.voiceTitle}>
+                  {isListening ? "Listening…" : isVoiceLoading ? "Processing…" : "Voice Input"}
+                </Text>
+                {isListening && liveTranscript ? (
+                  <Text style={styles.voiceTranscript} numberOfLines={2}>{liveTranscript}</Text>
+                ) : (
+                  <Text style={styles.voiceSubtitle}>
+                    {isListening ? "Speak your ingredients" : "Tap mic and say your ingredients"}
+                  </Text>
+                )}
+              </View>
+
+              {isListening && (
+                <Pressable
+                  onPress={handleVoice}
+                  style={styles.voiceStopButton}
+                >
+                  <Text style={styles.voiceStopText}>Stop</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+
+          {/* ── Saved Recipes ── */}
+          {savedEntries.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Saved Recipes</Text>
+                <Pressable onPress={() => router.push("/saved")}>
+                  <Text style={styles.sectionLink}>View All</Text>
+                </Pressable>
+              </View>
+              <View style={styles.listCard}>
+                {savedEntries.map(({ recipe, session }, idx) => (
+                  <React.Fragment key={recipe.id}>
+                    {idx > 0 && <View style={styles.divider} />}
+                    <SavedRecipeRow recipe={recipe} sessionId={session.id} />
+                  </React.Fragment>
+                ))}
+              </View>
+            </View>
+          )}
+
+        </ScrollView>
+      </SafeAreaView>
 
       <LoadingOverlay
         visible={isScanLoading || isVoiceLoading}
@@ -455,6 +412,25 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingTop: 4,
+    paddingBottom: 12,
+  },
+  greeting: {
+    fontFamily: "NunitoSans_600SemiBold",
+    fontSize: 13,
+    color: "#7B8579",
+    marginBottom: 2,
+  },
+  name: {
+    fontFamily: "NunitoSans_800ExtraBold",
+    fontSize: 22,
+    color: "#2C332A",
+  },
   avatarContainer: {
     width: 48,
     height: 48,
@@ -472,14 +448,12 @@ const styles = StyleSheet.create({
   filterPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 999,
   },
   filterPillActive: {
-    backgroundColor: "#8A9A86",
-    shadowColor: "#8A9A86",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -497,7 +471,7 @@ const styles = StyleSheet.create({
   },
   filterLabel: {
     fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 14,
+    fontSize: 13,
   },
   inputWrapper: {
     position: "relative",
@@ -511,7 +485,7 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: 56,
+    height: 52,
     paddingLeft: 48,
     paddingRight: 16,
     borderRadius: 999,
@@ -528,97 +502,158 @@ const styles = StyleSheet.create({
   sendButton: {
     position: "absolute",
     right: 6,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: "#8A9A86",
     alignItems: "center",
     justifyContent: "center",
   },
   scanButton: {
-    width: 256,
-    height: 256,
-    borderRadius: 48,
+    width: 220,
+    height: 220,
+    borderRadius: 44,
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+    gap: 14,
     shadowColor: "#8A9A86",
-    shadowOffset: { width: 8, height: 16 },
+    shadowOffset: { width: 6, height: 12 },
     shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 12,
+    shadowRadius: 20,
+    elevation: 10,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.2)",
   },
   scanIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
-  scanCard: {
-    width: 144,
-    borderRadius: 24,
+  section: {
+    marginTop: 20,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 16,
+    color: "#2C332A",
+  },
+  sectionLink: {
+    fontFamily: "NunitoSans_600SemiBold",
+    fontSize: 13,
+    color: "#8A9A86",
+  },
+  listCard: {
+    marginHorizontal: 24,
     backgroundColor: "#FFFFFF",
-    padding: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "rgba(226,223,216,0.5)",
-  },
-  scanImageContainer: {
-    height: 112,
-    width: "100%",
-    borderRadius: 16,
     overflow: "hidden",
-    backgroundColor: "#E8E6E1",
-    marginBottom: 10,
-    position: "relative",
-  },
-  checkBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    alignItems: "center",
-    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  fabContainer: {
-    position: "absolute",
-    bottom: 32,
-    left: 0,
-    right: 0,
+  savedRow: {
+    flexDirection: "row",
     alignItems: "center",
+    padding: 14,
+    gap: 12,
   },
-  fab: {
+  savedRowSwatch: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    flexShrink: 0,
+  },
+  savedRowTitle: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 13,
+    color: "#2C332A",
+  },
+  savedRowMeta: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 11,
+    color: "#7B8579",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "rgba(226,223,216,0.6)",
+    marginHorizontal: 14,
+  },
+  voiceCard: {
+    marginHorizontal: 24,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(226,223,216,0.5)",
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  voiceMicButton: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: "#2C332A",
+    backgroundColor: "#F0EFEA",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+    borderWidth: 1,
+    borderColor: "rgba(226,223,216,0.6)",
+    flexShrink: 0,
   },
-  fabListening: {
+  voiceMicButtonActive: {
     backgroundColor: "#8A9A86",
+    borderColor: "#8A9A86",
     shadowColor: "#8A9A86",
-    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
+  },
+  voiceTitle: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 14,
+    color: "#2C332A",
+    marginBottom: 3,
+  },
+  voiceSubtitle: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 12,
+    color: "#7B8579",
+  },
+  voiceTranscript: {
+    fontFamily: "NunitoSans_600SemiBold",
+    fontSize: 12,
+    color: "#8A9A86",
+    fontStyle: "italic",
+  },
+  voiceStopButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "rgba(201,122,126,0.1)",
+  },
+  voiceStopText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 12,
+    color: "#C97A7E",
   },
 });
