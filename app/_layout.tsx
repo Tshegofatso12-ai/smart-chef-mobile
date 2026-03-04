@@ -2,6 +2,7 @@ import "../global.css";
 import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { AppProvider } from "@/context/AppContext";
 import * as SplashScreen from "expo-splash-screen";
 import {
   useFonts,
@@ -38,13 +39,15 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <AppProvider>
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="ingredient-tray" />
+        <Stack.Screen name="recipe-ideas" />
         <Stack.Screen name="recipe/[id]" />
+        <Stack.Screen name="saved" />
       </Stack>
-    </>
+    </AppProvider>
   );
 }

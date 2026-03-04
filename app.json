@@ -23,7 +23,9 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      "expo-image-picker",
+      "expo-speech-recognition"
     ],
     "experiments": {
       "typedRoutes": true

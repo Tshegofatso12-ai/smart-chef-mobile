@@ -12,6 +12,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
+import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { useAppContext } from "@/context/AppContext";
+import { generateRecipes } from "@/lib/claude";
+import type { Ingredient, RecipeSession } from "@/types";
 
 const COLORS = {
   background: "#F9F6F0",
@@ -23,15 +27,6 @@ const COLORS = {
   mutedForeground: "#7B8579",
   border: "#E2DFD8",
   destructive: "#C97A7E",
-};
-
-type Ingredient = {
-  id: string;
-  name: string;
-  subtitle: string;
-  image: string;
-  wide: boolean;
-  badge?: string;
 };
 
 const INITIAL_INGREDIENTS: Ingredient[] = [
@@ -154,18 +149,39 @@ function WideCard({
 }
 
 export default function IngredientTrayScreen() {
-  const [ingredients, setIngredients] = useState<Ingredient[]>(INITIAL_INGREDIENTS);
+  const { trayIngredients, activeDietFilter, addSession } = useAppContext();
+  const [ingredients, setIngredients] = useState<Ingredient[]>(
+    trayIngredients.length > 0 ? trayIngredients : INITIAL_INGREDIENTS
+  );
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const removeIngredient = (id: string) => {
     setIngredients((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleGenerateRecipe = () => {
+  const handleGenerateRecipe = async () => {
     if (ingredients.length === 0) {
       Alert.alert("No Ingredients", "Please add at least one ingredient to generate a recipe.");
       return;
     }
-    router.push("/recipe/1");
+
+    setIsGenerating(true);
+    try {
+      const recipes = await generateRecipes(ingredients, activeDietFilter);
+      const session: RecipeSession = {
+        id: `session-${Date.now()}`,
+        createdAt: Date.now(),
+        ingredients,
+        dietFilter: activeDietFilter,
+        recipes,
+      };
+      addSession(session);
+      router.push("/recipe-ideas");
+    } catch (err) {
+      Alert.alert("Error", "Failed to generate recipes. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   // Build rows for the mixed grid
@@ -186,7 +202,6 @@ export default function IngredientTrayScreen() {
         const isNextWide = nextItem?.wide ?? true;
 
         if (!isNextWide && nextItem) {
-          // Pair two small cards
           rows.push(
             <View key={`row-${item.id}`} style={{ flexDirection: "row", gap: 16 }}>
               <SmallCard item={item} onRemove={() => removeIngredient(item.id)} />
@@ -195,7 +210,6 @@ export default function IngredientTrayScreen() {
           );
           i += 2;
         } else {
-          // Lone small card (next is wide or doesn't exist)
           rows.push(
             <View key={`row-${item.id}`} style={{ flexDirection: "row", gap: 16 }}>
               <SmallCard item={item} onRemove={() => removeIngredient(item.id)} />
@@ -271,6 +285,8 @@ export default function IngredientTrayScreen() {
           <Icon icon="solar:magic-stick-3-bold" size={24} color={COLORS.primaryForeground} />
         </Pressable>
       </LinearGradient>
+
+      <LoadingOverlay visible={isGenerating} message="Crafting your recipes..." />
     </View>
   );
 }
