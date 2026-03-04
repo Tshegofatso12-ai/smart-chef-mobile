@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -10,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
+import { Shimmer } from "@/components/Shimmer";
 import { useAppContext } from "@/context/AppContext";
 import type { Recipe } from "@/types";
 
@@ -31,6 +33,11 @@ function RecipeIdeaCard({
   recipe: Recipe;
   sessionId: string;
 }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+
+  const unsplashUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(recipe.title)},food`;
+
   return (
     <Pressable
       onPress={() =>
@@ -44,26 +51,53 @@ function RecipeIdeaCard({
         { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
       ]}
     >
-      {/* Gradient hero */}
-      <LinearGradient
-        colors={recipe.gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.cardHero}
-      >
+      {/* ── Hero ── */}
+      <View style={styles.cardHero}>
+        {/* Gradient always visible as base / fallback */}
+        <LinearGradient
+          colors={recipe.gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+
+        {/* Unsplash image fades in on load */}
+        {!imageError && (
+          <Image
+            source={{ uri: unsplashUrl }}
+            style={[StyleSheet.absoluteFillObject, { opacity: imageLoaded ? 1 : 0 }]}
+            resizeMode="cover"
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
+          />
+        )}
+
+        {/* Shimmer sweep while image is loading */}
+        {!imageLoaded && !imageError && <Shimmer />}
+
+        {/* Dark vignette at bottom so text stays readable */}
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.35)"]}
+          start={{ x: 0.5, y: 0.4 }}
+          end={{ x: 0.5, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+
         {/* Diet badge */}
         {recipe.badges[0] && (
-          <View style={[styles.heroBadge, { backgroundColor: "rgba(255,255,255,0.25)" }]}>
+          <View style={[styles.heroBadge, { backgroundColor: "rgba(255,255,255,0.22)" }]}>
             <Text style={styles.heroBadgeText}>{recipe.badges[0].label}</Text>
           </View>
         )}
-        {/* Chef hat icon */}
-        <View style={styles.heroIcon}>
-          <Icon icon="solar:chef-hat-bold" size={32} color="rgba(255,255,255,0.9)" />
-        </View>
-      </LinearGradient>
 
-      {/* Card body */}
+        {/* Chef icon */}
+        <View style={styles.heroIcon}>
+          <Icon icon="solar:chef-hat-bold" size={28} color="rgba(255,255,255,0.9)" />
+        </View>
+      </View>
+
+      {/* ── Card body ── */}
       <View style={styles.cardBody}>
         <Text style={styles.cardTitle} numberOfLines={2}>
           {recipe.title}
@@ -79,10 +113,12 @@ function RecipeIdeaCard({
           ))}
         </View>
 
-        {/* View recipe arrow */}
+        {/* View Recipe — generous hit area */}
         <View style={styles.cardFooter}>
           <Text style={styles.viewText}>View Recipe</Text>
-          <Icon icon="solar:alt-arrow-right-linear" size={16} color={COLORS.primary} />
+          <View style={styles.viewArrow}>
+            <Icon icon="solar:alt-arrow-right-linear" size={15} color={COLORS.primary} />
+          </View>
         </View>
       </View>
     </Pressable>
@@ -146,7 +182,7 @@ export default function RecipeIdeasScreen() {
           </Pressable>
         </View>
 
-        {/* Ingredient chips row */}
+        {/* Ingredient chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -236,17 +272,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(226,223,216,0.5)",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
   },
   cardHero: {
-    height: 160,
+    height: 180,
     alignItems: "flex-end",
     justifyContent: "space-between",
     padding: 16,
     flexDirection: "row",
+    overflow: "hidden",
   },
   heroBadge: {
     paddingHorizontal: 12,
@@ -262,10 +299,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -274,10 +313,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   cardTitle: {
-    fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 17,
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 18,
     color: "#2C332A",
-    lineHeight: 23,
+    lineHeight: 24,
   },
   statsRow: {
     flexDirection: "row",
@@ -296,12 +335,21 @@ const styles = StyleSheet.create({
   cardFooter: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
+    paddingTop: 4,
   },
   viewText: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 13,
+    fontSize: 14,
     color: "#8A9A86",
+  },
+  viewArrow: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(138,154,134,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyTitle: {
     fontFamily: "NunitoSans_800ExtraBold",

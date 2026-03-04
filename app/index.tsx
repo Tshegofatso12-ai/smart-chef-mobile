@@ -14,6 +14,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
+import * as Haptics from "expo-haptics";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from "react-native-reanimated";
 
 // expo-speech-recognition requires a native build — guard for Expo Go
 let ExpoSpeechRecognitionModule: any = null;
@@ -97,6 +103,12 @@ export default function HomeScreen() {
     savedRecipeIds,
     sessions,
   } = useAppContext();
+
+  // ─── Magic Scan spring animation ─────────────────────────────────────────
+  const scanScale = useSharedValue(1);
+  const scanAnimStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scanScale.value }],
+  }));
 
   const [ingredientInput, setIngredientInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
@@ -251,7 +263,10 @@ export default function HomeScreen() {
             return (
               <Pressable
                 key={filter.id}
-                onPress={() => setActiveDietFilter(isActive ? null : filter.id)}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  setActiveDietFilter(isActive ? null : filter.id);
+                }}
                 style={[
                   styles.filterPill,
                   isActive
@@ -307,31 +322,80 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
         >
-          {/* Magic Scan Button */}
+          {/* Magic Scan Button — 3D squishy */}
           <View style={{ alignItems: "center", paddingVertical: 8 }}>
-            <Pressable
-              onPress={handleMagicScan}
-              style={({ pressed }) => [{ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
-            >
-              <LinearGradient
-                colors={["#9EAE9A", "#8A9A86", "#758471"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.scanButton}
+            <Animated.View style={scanAnimStyle}>
+              <Pressable
+                onPress={handleMagicScan}
+                onPressIn={() => {
+                  scanScale.value = withSpring(0.92, { damping: 14, stiffness: 450 });
+                }}
+                onPressOut={() => {
+                  scanScale.value = withSpring(1, { damping: 11, stiffness: 280 });
+                }}
               >
-                <View style={styles.scanIconCircle}>
-                  <Icon icon="solar:scanner-2-bold-duotone" size={44} color={COLORS.primaryForeground} />
+                {/* Outer glow shadow wrapper */}
+                <View style={styles.scanShadowWrap}>
+                  {/* Deep-tone base gradient (top-light → bottom-dark for 3D depth) */}
+                  <LinearGradient
+                    colors={["#ADBBA9", "#8A9A86", "#697D66"]}
+                    start={{ x: 0.15, y: 0 }}
+                    end={{ x: 0.85, y: 1 }}
+                    style={styles.scanButton}
+                  >
+                    {/* High-gloss top reflection */}
+                    <LinearGradient
+                      colors={[
+                        "rgba(255,255,255,0.38)",
+                        "rgba(255,255,255,0.10)",
+                        "transparent",
+                      ]}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.scanGloss}
+                    />
+
+                    {/* Bottom rim darkening */}
+                    <LinearGradient
+                      colors={["transparent", "rgba(0,0,0,0.18)"]}
+                      start={{ x: 0.5, y: 0.6 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.scanRim}
+                    />
+
+                    <View style={styles.scanIconCircle}>
+                      <Icon
+                        icon="solar:scanner-2-bold-duotone"
+                        size={44}
+                        color={COLORS.primaryForeground}
+                      />
+                    </View>
+                    <View style={{ alignItems: "center" }}>
+                      <Text
+                        style={{
+                          fontFamily: "NunitoSans_800ExtraBold",
+                          fontSize: 20,
+                          color: COLORS.primaryForeground,
+                          letterSpacing: -0.5,
+                        }}
+                      >
+                        Magic Scan
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: "NunitoSans_400Regular",
+                          fontSize: 12,
+                          color: "rgba(255,255,255,0.8)",
+                          marginTop: 3,
+                        }}
+                      >
+                        Tap to scan ingredients
+                      </Text>
+                    </View>
+                  </LinearGradient>
                 </View>
-                <View style={{ alignItems: "center" }}>
-                  <Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: COLORS.primaryForeground, letterSpacing: -0.5 }}>
-                    Magic Scan
-                  </Text>
-                  <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
-                    Tap to scan ingredients
-                  </Text>
-                </View>
-              </LinearGradient>
-            </Pressable>
+              </Pressable>
+            </Animated.View>
           </View>
 
           {/* ── Voice Input ── */}
@@ -509,6 +573,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  scanShadowWrap: {
+    shadowColor: "#5A7056",
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.45,
+    shadowRadius: 24,
+    elevation: 14,
+  },
   scanButton: {
     width: 220,
     height: 220,
@@ -516,19 +587,27 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 14,
-    shadowColor: "#8A9A86",
-    shadowOffset: { width: 6, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
+    borderColor: "rgba(255,255,255,0.25)",
+    overflow: "hidden",
+  },
+  scanGloss: {
+    ...StyleSheet.absoluteFillObject,
+    borderTopLeftRadius: 44,
+    borderTopRightRadius: 44,
+  },
+  scanRim: {
+    ...StyleSheet.absoluteFillObject,
+    borderBottomLeftRadius: 44,
+    borderBottomRightRadius: 44,
   },
   scanIconCircle: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
     alignItems: "center",
     justifyContent: "center",
   },

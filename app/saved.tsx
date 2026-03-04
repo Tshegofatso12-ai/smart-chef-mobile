@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  Image,
   ScrollView,
   Pressable,
   StyleSheet,
@@ -10,6 +11,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
+import { Shimmer } from "@/components/Shimmer";
 import { useAppContext } from "@/context/AppContext";
 import type { Recipe, RecipeSession } from "@/types";
 
@@ -47,6 +49,10 @@ function RecipeRow({
   sessionId: string;
   isSaved?: boolean;
 }) {
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const unsplashUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(recipe.title)},food`;
+
   return (
     <Pressable
       onPress={() =>
@@ -60,13 +66,25 @@ function RecipeRow({
         { opacity: pressed ? 0.85 : 1 },
       ]}
     >
-      {/* Gradient mini swatch */}
-      <LinearGradient
-        colors={recipe.gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.rowSwatch}
-      />
+      {/* Swatch: gradient base + Unsplash image */}
+      <View style={[styles.rowSwatch, { overflow: "hidden" }]}>
+        <LinearGradient
+          colors={recipe.gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        {!imageError && (
+          <Image
+            source={{ uri: unsplashUrl }}
+            style={[StyleSheet.absoluteFillObject, { opacity: imageLoaded ? 1 : 0 }]}
+            resizeMode="cover"
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
+          />
+        )}
+        {!imageLoaded && !imageError && <Shimmer />}
+      </View>
 
       {/* Info */}
       <View style={{ flex: 1, gap: 4 }}>

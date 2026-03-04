@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,9 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from "expo-blur";
 import { Icon } from "@/components/Icon";
+import { Shimmer } from "@/components/Shimmer";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useAppContext } from "@/context/AppContext";
 import { generateRecipes } from "@/lib/claude";
@@ -148,12 +150,52 @@ function WideCard({
   );
 }
 
+// ─── Shimmer placeholder card ──────────────────────────────────────────────
+function ShimmerIngredientCard({ wide = false }: { wide?: boolean }) {
+  return (
+    <View style={[styles.card, !wide && { flex: 1 }, { overflow: "hidden" }]}>
+      {/* Image area */}
+      <View
+        style={[
+          wide ? styles.wideCardImage : styles.cardImage,
+          { backgroundColor: "#E8E6E1", overflow: "hidden" },
+        ]}
+      >
+        <Shimmer />
+      </View>
+      {/* Text lines */}
+      <View style={{ paddingHorizontal: 4, gap: 7 }}>
+        <View
+          style={{ height: 13, width: "68%", borderRadius: 6, backgroundColor: "#E8E6E1", overflow: "hidden" }}
+        >
+          <Shimmer />
+        </View>
+        <View
+          style={{ height: 10, width: "45%", borderRadius: 5, backgroundColor: "#EEEDE9", overflow: "hidden" }}
+        >
+          <Shimmer />
+        </View>
+      </View>
+    </View>
+  );
+}
+
 export default function IngredientTrayScreen() {
   const { trayIngredients, activeDietFilter, addSession } = useAppContext();
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     trayIngredients.length > 0 ? trayIngredients : INITIAL_INGREDIENTS
   );
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Brief shimmer reveal when arriving from an AI scan (trayIngredients populated)
+  const [isInitialLoading, setIsInitialLoading] = useState(
+    () => trayIngredients.length > 0
+  );
+  useEffect(() => {
+    if (!isInitialLoading) return;
+    const t = setTimeout(() => setIsInitialLoading(false), 900);
+    return () => clearTimeout(t);
+  }, []);
 
   const removeIngredient = (id: string) => {
     setIngredients((prev) => prev.filter((item) => item.id !== id));
@@ -182,6 +224,44 @@ export default function IngredientTrayScreen() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // Shimmer skeleton in the same grid layout
+  const renderShimmerGrid = () => {
+    const shapes = [
+      { wide: false }, { wide: false },
+      { wide: true },
+      { wide: false }, { wide: false },
+    ];
+    const rows: React.ReactNode[] = [];
+    let i = 0;
+    while (i < shapes.length) {
+      const s = shapes[i];
+      if (s.wide) {
+        rows.push(<ShimmerIngredientCard key={`sk-${i}`} wide />);
+        i += 1;
+      } else {
+        const next = shapes[i + 1];
+        if (next && !next.wide) {
+          rows.push(
+            <View key={`sk-${i}`} style={{ flexDirection: "row", gap: 16 }}>
+              <ShimmerIngredientCard />
+              <ShimmerIngredientCard />
+            </View>
+          );
+          i += 2;
+        } else {
+          rows.push(
+            <View key={`sk-${i}`} style={{ flexDirection: "row", gap: 16 }}>
+              <ShimmerIngredientCard />
+              <View style={{ flex: 1 }} />
+            </View>
+          );
+          i += 1;
+        }
+      }
+    }
+    return rows;
   };
 
   // Build rows for the mixed grid
@@ -257,7 +337,9 @@ export default function IngredientTrayScreen() {
           contentContainerStyle={{ padding: 24, gap: 16, paddingBottom: 120 }}
           showsVerticalScrollIndicator={false}
         >
-          {ingredients.length === 0 ? (
+          {isInitialLoading ? (
+            renderShimmerGrid()
+          ) : ingredients.length === 0 ? (
             <View style={styles.emptyState}>
               <Text style={styles.emptyText}>No ingredients detected.</Text>
               <Text style={styles.emptySubtext}>Tap the + button to add ingredients manually.</Text>
@@ -268,23 +350,23 @@ export default function IngredientTrayScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Generate Recipe Button */}
-      <LinearGradient
-        colors={["transparent", "rgba(249,246,240,0.95)", "#F9F6F0"]}
-        style={styles.bottomGradient}
-        pointerEvents="box-none"
-      >
+      {/* Generate Recipe — frosted glass container */}
+      <View style={styles.bottomContainer} pointerEvents="box-none">
+        <BlurView intensity={82} tint="light" style={StyleSheet.absoluteFillObject} />
+        {/* Subtle top border to separate from scroll content */}
+        <View style={styles.bottomBorder} />
         <Pressable
           onPress={handleGenerateRecipe}
           style={({ pressed }) => [
             styles.generateButton,
             { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
           ]}
+          pointerEvents="auto"
         >
           <Text style={styles.generateButtonText}>Generate Recipe</Text>
           <Icon icon="solar:magic-stick-3-bold" size={24} color={COLORS.primaryForeground} />
         </Pressable>
-      </LinearGradient>
+      </View>
 
       <LoadingOverlay visible={isGenerating} message="Crafting your recipes..." />
     </View>
@@ -401,14 +483,20 @@ const styles = StyleSheet.create({
     color: "#7B8579",
     textAlign: "center",
   },
-  bottomGradient: {
+  bottomContainer: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 24,
     paddingBottom: 40,
-    paddingTop: 24,
+    paddingTop: 16,
+    overflow: "hidden",
+  },
+  bottomBorder: {
+    height: 1,
+    backgroundColor: "rgba(226,223,216,0.45)",
+    marginBottom: 16,
   },
   generateButton: {
     width: "100%",
