@@ -39,7 +39,7 @@ export type RecipeSession = {
   id: string;
   createdAt: number;
   ingredients: Ingredient[];
-  dietFilter: DietFilter;
+  dietFilter: DietFilter | null;
   recipes: Recipe[];
 };
 
@@ -59,6 +59,6 @@ export type AppContextValue = {
   isRecipeSaved: (recipeId: string) => boolean;
   trayIngredients: Ingredient[];
   setTrayIngredients: (ingredients: Ingredient[]) => void;
-  activeDietFilter: DietFilter;
-  setActiveDietFilter: (filter: DietFilter) => void;
+  activeDietFilter: DietFilter | null;
+  setActiveDietFilter: (filter: DietFilter | null) => void;
 };

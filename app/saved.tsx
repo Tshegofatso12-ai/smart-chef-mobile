@@ -8,8 +8,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
+import { RecipeRow } from "@/components/RecipeRow";
 import { useAppContext } from "@/context/AppContext";
 import type { Recipe, RecipeSession } from "@/types";
 
@@ -36,77 +36,6 @@ function formatDate(timestamp: number): string {
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
-function RecipeRow({
-  recipe,
-  sessionId,
-  isSaved,
-}: {
-  recipe: Recipe;
-  sessionId: string;
-  isSaved?: boolean;
-}) {
-  return (
-    <Pressable
-      onPress={() =>
-        router.push({
-          pathname: "/recipe/[id]",
-          params: { id: recipe.id, sessionId },
-        })
-      }
-      style={({ pressed }) => [
-        styles.recipeRow,
-        { opacity: pressed ? 0.85 : 1 },
-      ]}
-    >
-      {/* Gradient mini swatch */}
-      <LinearGradient
-        colors={recipe.gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.rowSwatch}
-      />
-
-      {/* Info */}
-      <View style={{ flex: 1, gap: 4 }}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
-          {recipe.title}
-        </Text>
-        <View style={styles.rowMeta}>
-          {recipe.badges[0] && (
-            <View
-              style={[
-                styles.rowBadge,
-                { backgroundColor: recipe.badges[0].bg },
-              ]}
-            >
-              <Text
-                style={[styles.rowBadgeText, { color: recipe.badges[0].color }]}
-              >
-                {recipe.badges[0].label}
-              </Text>
-            </View>
-          )}
-          <Text style={styles.rowStat}>{recipe.cookTime}</Text>
-          <Text style={styles.rowStat}>·</Text>
-          <Text style={styles.rowStat}>{recipe.calories}</Text>
-        </View>
-      </View>
-
-      {/* Arrow + saved indicator */}
-      <View style={{ alignItems: "center", gap: 4 }}>
-        {isSaved && (
-          <Icon icon="solar:bookmark-bold" size={14} color={COLORS.primary} />
-        )}
-        <Icon
-          icon="solar:alt-arrow-right-linear"
-          size={18}
-          color={COLORS.mutedForeground}
-        />
-      </View>
-    </Pressable>
-  );
 }
 
 export default function SavedScreen() {
@@ -421,37 +350,45 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
+    paddingVertical: 20,
+    paddingLeft: 20,
   },
   recipeRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 22,
     gap: 14,
+    position: "relative",
   },
   rowSwatch: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     flexShrink: 0,
   },
   rowTitle: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 14,
+    fontSize: 15,
     color: "#2C332A",
+    marginBottom: 1,
+    marginTop: 5,
   },
   rowMeta: {
     flexDirection: "row",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: 6,
+    marginTop: 4,
   },
   rowBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
     borderRadius: 999,
   },
   rowBadgeText: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 9,
+    fontSize: 10,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -460,10 +397,42 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#7B8579",
   },
+  bookmarkBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexShrink: 0,
+  },
+  rowChevron: {
+    position: "absolute",
+    right: 10,
+    top: "50%",
+    transform: [{ translateY: -15 }],
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowInfo: {
+    flex: 1,
+    gap: 6,
+    paddingRight: 50,
+  },
   divider: {
     height: 1,
     backgroundColor: "rgba(226,223,216,0.6)",
-    marginHorizontal: 16,
+    margin: 16,
   },
   sessionHeader: {
     flexDirection: "row",
