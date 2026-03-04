@@ -35,6 +35,7 @@ function RecipeIdeaCard({
 }) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const { isRecipeSaved, toggleSaved } = useAppContext();
 
   const unsplashUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(recipe.title)},food`;
 
@@ -99,9 +100,26 @@ function RecipeIdeaCard({
 
       {/* ── Card body ── */}
       <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {recipe.title}
-        </Text>
+        {/* Title row: recipe name + bookmark button */}
+        <View style={styles.titleRow}>
+          <Text style={[styles.cardTitle, { flex: 1, paddingRight: 8 }]} numberOfLines={2}>
+            {recipe.title}
+          </Text>
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              toggleSaved(recipe.id, sessionId);
+            }}
+            style={styles.bookmarkBtn}
+            hitSlop={8}
+          >
+            <Icon
+              icon={isRecipeSaved(recipe.id) ? "solar:bookmark-bold" : "solar:bookmark-outline"}
+              size={18}
+              color={COLORS.primary}
+            />
+          </Pressable>
+        </View>
 
         {/* Stats row */}
         <View style={styles.statsRow}>
@@ -311,6 +329,20 @@ const styles = StyleSheet.create({
   cardBody: {
     padding: 20,
     gap: 12,
+  },
+  titleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  bookmarkBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "rgba(138,154,134,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
   },
   cardTitle: {
     fontFamily: "NunitoSans_700Bold",

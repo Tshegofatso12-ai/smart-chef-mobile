@@ -34,6 +34,7 @@ const ICON_MAP: Record<string, IconMapping> = {
   "solar:heart-outline": { set: "Ionicons", name: "heart-outline" },
   "solar:play-circle-bold": { set: "Ionicons", name: "play-circle" },
   "solar:alt-arrow-right-linear": { set: "Ionicons", name: "arrow-forward" },
+  "solar:chevron-right": { set: "Ionicons", name: "chevron-forward" },
   "solar:send-bold": { set: "Ionicons", name: "send" },
   "solar:bookmark-bold": { set: "Ionicons", name: "bookmark" },
   "solar:bookmark-outline": { set: "Ionicons", name: "bookmark-outline" },
