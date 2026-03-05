@@ -11,7 +11,6 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { BlurView } from "expo-blur";
 import { Icon } from "@/components/Icon";
 import { Shimmer } from "@/components/Shimmer";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
@@ -350,21 +349,30 @@ export default function IngredientTrayScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* Generate Recipe — frosted glass container */}
+      {/* Generate Recipe — floating pill FAB */}
       <View style={styles.bottomContainer} pointerEvents="box-none">
-        <BlurView intensity={82} tint="light" style={StyleSheet.absoluteFillObject} />
-        {/* Subtle top border to separate from scroll content */}
-        <View style={styles.bottomBorder} />
         <Pressable
           onPress={handleGenerateRecipe}
-          style={({ pressed }) => [
-            styles.generateButton,
-            { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
-          ]}
+          style={({ pressed }) => ({ opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] })}
           pointerEvents="auto"
         >
-          <Text style={styles.generateButtonText}>Generate Recipe</Text>
-          <Icon icon="solar:magic-stick-3-bold" size={24} color={COLORS.primaryForeground} />
+          <View style={styles.generateShadow}>
+            <LinearGradient
+              colors={["#ADBBA9", "#8A9A86", "#697D66"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.generateButton}
+            >
+              <LinearGradient
+                colors={["rgba(255,255,255,0.28)", "transparent"]}
+                start={{ x: 0.5, y: 0 }}
+                end={{ x: 0.5, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <Text style={styles.generateButtonText}>Generate Recipe</Text>
+              <Icon icon="solar:magic-stick-3-bold" size={22} color="#fff" />
+            </LinearGradient>
+          </View>
         </Pressable>
       </View>
 
@@ -485,37 +493,32 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-    paddingTop: 16,
-    overflow: "hidden",
+    bottom: 36,
+    left: 24,
+    right: 24,
   },
-  bottomBorder: {
-    height: 1,
-    backgroundColor: "rgba(226,223,216,0.45)",
-    marginBottom: 16,
+  generateShadow: {
+    shadowColor: "#4A6647",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 12,
   },
   generateButton: {
-    width: "100%",
-    height: 64,
-    borderRadius: 24,
-    backgroundColor: "#8A9A86",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 12,
-    shadowColor: "#8A9A86",
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 6,
+    gap: 10,
+    paddingVertical: 18,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    overflow: "hidden",
   },
   generateButtonText: {
-    fontFamily: "NunitoSans_700Bold",
+    fontFamily: "NunitoSans_800ExtraBold",
     fontSize: 17,
     color: "#FFFFFF",
+    letterSpacing: -0.3,
   },
 });

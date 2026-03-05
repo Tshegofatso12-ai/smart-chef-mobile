@@ -310,61 +310,33 @@ export default function HomeScreen() {
                   scanScale.value = withSpring(1, { damping: 11, stiffness: 280 });
                 }}
               >
-                {/* Outer glow shadow wrapper */}
                 <View style={styles.scanShadowWrap}>
-                  {/* Deep-tone base gradient (top-light → bottom-dark for 3D depth) */}
                   <LinearGradient
                     colors={["#ADBBA9", "#8A9A86", "#697D66"]}
                     start={{ x: 0.15, y: 0 }}
                     end={{ x: 0.85, y: 1 }}
                     style={styles.scanButton}
                   >
-                    {/* High-gloss top reflection */}
                     <LinearGradient
-                      colors={[
-                        "rgba(255,255,255,0.38)",
-                        "rgba(255,255,255,0.10)",
-                        "transparent",
-                      ]}
+                      colors={["rgba(255,255,255,0.38)", "rgba(255,255,255,0.10)", "transparent"]}
                       start={{ x: 0.5, y: 0 }}
                       end={{ x: 0.5, y: 1 }}
                       style={styles.scanGloss}
                     />
-
-                    {/* Bottom rim darkening */}
                     <LinearGradient
                       colors={["transparent", "rgba(0,0,0,0.18)"]}
                       start={{ x: 0.5, y: 0.6 }}
                       end={{ x: 0.5, y: 1 }}
                       style={styles.scanRim}
                     />
-
                     <View style={styles.scanIconCircle}>
-                      <Icon
-                        icon="solar:scanner-2-bold-duotone"
-                        size={44}
-                        color={COLORS.primaryForeground}
-                      />
+                      <Icon icon="solar:scanner-2-bold-duotone" size={44} color={COLORS.primaryForeground} />
                     </View>
                     <View style={{ alignItems: "center" }}>
-                      <Text
-                        style={{
-                          fontFamily: "NunitoSans_800ExtraBold",
-                          fontSize: 20,
-                          color: COLORS.primaryForeground,
-                          letterSpacing: -0.5,
-                        }}
-                      >
+                      <Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: COLORS.primaryForeground, letterSpacing: -0.5 }}>
                         Magic Scan
                       </Text>
-                      <Text
-                        style={{
-                          fontFamily: "NunitoSans_400Regular",
-                          fontSize: 12,
-                          color: "rgba(255,255,255,0.8)",
-                          marginTop: 3,
-                        }}
-                      >
+                      <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
                         Tap to scan ingredients
                       </Text>
                     </View>
