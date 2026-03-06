@@ -59,6 +59,8 @@ export type AppContextValue = {
   isRecipeSaved: (recipeId: string) => boolean;
   trayIngredients: Ingredient[];
   setTrayIngredients: (ingredients: Ingredient[]) => void;
+  scannedImageUri: string | null;
+  setScannedImageUri: (uri: string | null) => void;
   activeDietFilter: DietFilter | null;
   setActiveDietFilter: (filter: DietFilter | null) => void;
 };

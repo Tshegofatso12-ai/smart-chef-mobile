@@ -76,6 +76,7 @@ export default function HomeScreen() {
     activeDietFilter,
     setActiveDietFilter,
     setTrayIngredients,
+    setScannedImageUri,
     savedRecipeIds,
     sessions,
   } = useAppContext();
@@ -122,6 +123,7 @@ export default function HomeScreen() {
     try {
       const ingredients = await extractIngredientsFromText(transcript);
       setTrayIngredients(ingredients);
+      setScannedImageUri(null);
       router.push("/ingredient-tray");
     } catch {
       Alert.alert("Error", "Could not extract ingredients from voice. Please try again.");
@@ -144,6 +146,7 @@ export default function HomeScreen() {
     try {
       const ingredients = await extractIngredientsFromText(text);
       setTrayIngredients(ingredients);
+      setScannedImageUri(null);
       setIngredientInput("");
       router.push("/ingredient-tray");
     } catch (err: any) {
@@ -179,7 +182,7 @@ export default function HomeScreen() {
       result = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.7, mediaTypes: ["images"] });
     }
     if (result.canceled || !result.assets[0]?.base64) return;
-    const { base64, mimeType } = result.assets[0];
+    const { base64, mimeType, uri } = result.assets[0];
     setIsScanLoading(true);
     try {
       const ingredients = await extractIngredientsFromImage(
@@ -187,6 +190,7 @@ export default function HomeScreen() {
         (mimeType === "image/png" ? "image/png" : "image/jpeg")
       );
       setTrayIngredients(ingredients);
+      setScannedImageUri(uri);
       router.push("/ingredient-tray");
     } catch {
       Alert.alert("Error", "Could not detect ingredients from image. Please try again.");

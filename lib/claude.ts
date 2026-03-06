@@ -122,6 +122,55 @@ const GRADIENT_PALETTE: Array<[string, string]> = [
   ["#859CA9", "#5E7A87"],
 ];
 
+// ─── Apply ingredient fix from user instruction ────────────────────────────
+
+export async function applyIngredientFix(
+  currentIngredients: Ingredient[],
+  fixInstruction: string
+): Promise<Ingredient[]> {
+  const nameList = currentIngredients.map((i) => i.name).join(", ");
+  const response = await client.messages.create({
+    model: MODEL,
+    max_tokens: 256,
+    messages: [
+      {
+        role: "user",
+        content: `Current ingredient list: ${nameList}
+
+Fix instruction: "${fixInstruction}"
+
+Apply the fix to the list. Examples:
+- "Lemon not pomelo" → replace pomelo with lemon
+- "Add lime" → append lime
+- "Remove garlic" → remove garlic
+
+Return ONLY a valid JSON array of the corrected ingredient names (strings), no markdown, no explanation.
+Example: ["Chicken","Spinach","Lemon","Garlic"]`,
+      },
+    ],
+  });
+
+  const raw = (response.content[0] as { text: string }).text.trim();
+  const cleaned = raw.replace(/^```[a-z]*\n?/i, "").replace(/```$/i, "").trim();
+  const updatedNames = JSON.parse(cleaned) as string[];
+
+  const existingMap = new Map(currentIngredients.map((i) => [i.name.toLowerCase(), i]));
+
+  return updatedNames.map((name, idx) => {
+    const existing = existingMap.get(name.toLowerCase());
+    if (existing) return existing;
+    return {
+      id: `fix-${Date.now()}-${idx}`,
+      name,
+      subtitle: "",
+      image: "",
+      wide: false,
+    };
+  });
+}
+
+// ─── Recipe generation ─────────────────────────────────────────────────────
+
 export async function generateRecipes(
   ingredients: Ingredient[],
   dietFilter: DietFilter | null
