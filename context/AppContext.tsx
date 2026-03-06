@@ -28,6 +28,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [sessions, setSessions] = useState<RecipeSession[]>([]);
   const [savedRecipeIds, setSavedRecipeIds] = useState<SavedRecipeEntry[]>([]);
   const [trayIngredients, setTrayIngredients] = useState<Ingredient[]>([]);
+  const [scannedImageUri, setScannedImageUri] = useState<string | null>(null);
   const [activeDietFilter, setActiveDietFilter] =
     useState<DietFilter | null>(null);
 
@@ -82,6 +83,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isRecipeSaved,
         trayIngredients,
         setTrayIngredients,
+        scannedImageUri,
+        setScannedImageUri,
         activeDietFilter,
         setActiveDietFilter,
       }}
