@@ -45,7 +45,7 @@ import type { DietFilter, Recipe } from "@/types";
 const COLORS = {
   background: "#F9F6F0",
   foreground: "#2C332A",
-  primary: "#8A9A86",
+  primary: "#059669",
   primaryForeground: "#FFFFFF",
   card: "#FFFFFF",
   muted: "#E8E6E1",
@@ -316,7 +316,7 @@ export default function HomeScreen() {
               >
                 <View style={styles.scanShadowWrap}>
                   <LinearGradient
-                    colors={["#ADBBA9", "#8A9A86", "#697D66"]}
+                    colors={["#6EE7B7", "#059669", "#047857"]}
                     start={{ x: 0.15, y: 0 }}
                     end={{ x: 0.85, y: 1 }}
                     style={styles.scanButton}
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "#8A9A86",
+    backgroundColor: "#059669",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   sectionLink: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 13,
-    color: "#8A9A86",
+    color: "#059669",
   },
   listCard: {
     marginHorizontal: 24,
@@ -631,9 +631,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   voiceMicButtonActive: {
-    backgroundColor: "#8A9A86",
-    borderColor: "#8A9A86",
-    shadowColor: "#8A9A86",
+    backgroundColor: "#059669",
+    borderColor: "#059669",
+    shadowColor: "#059669",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
   voiceTranscript: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 12,
-    color: "#8A9A86",
+    color: "#059669",
     fontStyle: "italic",
   },
   voiceStopButton: {

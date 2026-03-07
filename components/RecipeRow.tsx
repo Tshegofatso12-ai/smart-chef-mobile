@@ -94,7 +94,7 @@ export function RecipeRow({
       {/* Bookmark top-right */}
       {isSaved && (
         <View style={styles.bookmarkBadge}>
-          <Icon icon="solar:bookmark-bold" size={28} color="#8A9A86" />
+          <Icon icon="solar:bookmark-bold" size={28} color="#059669" />
         </View>
       )}
     </Pressable>

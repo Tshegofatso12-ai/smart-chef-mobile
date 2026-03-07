@@ -15,7 +15,7 @@ import { useAppContext } from "@/context/AppContext";
 const COLORS = {
   background: "#F9F6F0",
   foreground: "#2C332A",
-  primary: "#8A9A86",
+  primary: "#059669",
   primaryForeground: "#FFFFFF",
   card: "#FFFFFF",
   muted: "#E8E6E1",
@@ -304,7 +304,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#8A9A86",
+    backgroundColor: "#059669",
   },
   chipWrap: {
     flexDirection: "row",
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "#8A9A86",
+    backgroundColor: "#059669",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: "#FFFFFF",
     borderWidth: 1.5,
-    borderColor: "#8A9A86",
+    borderColor: "#059669",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 15,
-    color: "#8A9A86",
+    color: "#059669",
   },
   ctaButton: {
     width: "100%",
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 999,
-    backgroundColor: "#8A9A86",
+    backgroundColor: "#059669",
   },
   backButtonText: {
     fontFamily: "NunitoSans_700Bold",
