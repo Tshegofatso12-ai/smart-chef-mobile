@@ -16,7 +16,7 @@ import type { Recipe, RecipeSession } from "@/types";
 const COLORS = {
   background: "#F9F6F0",
   foreground: "#2C332A",
-  primary: "#8A9A86",
+  primary: "#059669",
   primaryForeground: "#FFFFFF",
   card: "#FFFFFF",
   muted: "#E8E6E1",
@@ -308,8 +308,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tabActive: {
-    backgroundColor: "#8A9A86",
-    shadowColor: "#8A9A86",
+    backgroundColor: "#059669",
+    shadowColor: "#059669",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 999,
-    backgroundColor: "#8A9A86",
+    backgroundColor: "#059669",
   },
   goButtonText: {
     fontFamily: "NunitoSans_700Bold",

@@ -11,20 +11,20 @@ module.exports = {
         background: "#F9F6F0",
         foreground: "#2C332A",
         primary: {
-          DEFAULT: "#8A9A86",
+          DEFAULT: "#059669",
           foreground: "#FFFFFF",
         },
         secondary: {
-          DEFAULT: "#E3E8E0",
-          foreground: "#4A5546",
+          DEFAULT: "#D1FAE5",
+          foreground: "#065F46",
         },
         muted: {
           DEFAULT: "#E8E6E1",
           foreground: "#7B8579",
         },
         accent: {
-          DEFAULT: "#D1D8CD",
-          foreground: "#3A4536",
+          DEFAULT: "#A7F3D0",
+          foreground: "#064E3B",
         },
         destructive: {
           DEFAULT: "#C97A7E",
@@ -40,9 +40,9 @@ module.exports = {
         },
         border: "#E2DFD8",
         input: "#F0EFEA",
-        ring: "#8A9A86",
+        ring: "#059669",
         chart: {
-          1: "#8A9A86",
+          1: "#059669",
           2: "#C97A7E",
           3: "#DDA77B",
           4: "#859CA9",

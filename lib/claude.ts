@@ -110,13 +110,13 @@ const DIET_LABEL: Record<DietFilter, string> = {
 };
 
 const DIET_BADGE_COLORS: Record<DietFilter, { color: string; bg: string }> = {
-  "low-fat": { color: "#8A9A86", bg: "rgba(138,154,134,0.12)" },
+  "low-fat": { color: "#059669", bg: "rgba(5,150,105,0.12)" },
   "low-carb": { color: "#DDA77B", bg: "rgba(221,167,123,0.12)" },
   "high-protein": { color: "#C97A7E", bg: "rgba(201,122,126,0.12)" },
 };
 
 const GRADIENT_PALETTE: Array<[string, string]> = [
-  ["#9EAE9A", "#758471"],
+  ["#34D399", "#059669"],
   ["#C97A7E", "#A5595D"],
   ["#DDA77B", "#B8845A"],
   ["#859CA9", "#5E7A87"],
@@ -235,7 +235,7 @@ Example of ONE element (your array must have 3):
       stats: [
         {
           icon: "solar:clock-circle-bold",
-          iconColor: "#8A9A86",
+          iconColor: "#059669",
           label: "Time",
           value: r.cookTime,
         },
@@ -247,7 +247,7 @@ Example of ONE element (your array must have 3):
         },
         {
           icon: "solar:leaf-bold",
-          iconColor: "#8A9A86",
+          iconColor: "#059669",
           label: "Match",
           value: dietLabel,
         },

@@ -18,7 +18,7 @@ import type { Recipe } from "@/types";
 const COLORS = {
   background: "#F9F6F0",
   foreground: "#2C332A",
-  primary: "#8A9A86",
+  primary: "#059669",
   primaryForeground: "#FFFFFF",
   card: "#FFFFFF",
   muted: "#E8E6E1",
@@ -373,7 +373,7 @@ const styles = StyleSheet.create({
   viewText: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 14,
-    color: "#8A9A86",
+    color: "#059669",
   },
   viewArrow: {
     width: 28,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingVertical: 14,
     borderRadius: 999,
-    backgroundColor: "#8A9A86",
+    backgroundColor: "#059669",
   },
   goHomeText: {
     fontFamily: "NunitoSans_700Bold",

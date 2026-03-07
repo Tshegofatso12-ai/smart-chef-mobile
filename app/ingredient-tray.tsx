@@ -45,7 +45,7 @@ try {
 const COLORS = {
   background: "#F9F6F0",
   foreground: "#2C332A",
-  primary: "#8A9A86",
+  primary: "#059669",
   primaryForeground: "#FFFFFF",
   card: "#FFFFFF",
   muted: "#E8E6E1",
@@ -482,7 +482,7 @@ export default function IngredientTrayScreen() {
         >
           <View style={styles.generateShadow}>
             <LinearGradient
-              colors={["#ADBBA9", "#8A9A86", "#697D66"]}
+              colors={["#6EE7B7", "#059669", "#047857"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.generateButton}
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#8A9A86",
+    backgroundColor: "#059669",
     flexShrink: 0,
   },
   listName: {
@@ -881,9 +881,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   sheetTileActive: {
-    backgroundColor: "#8A9A86",
-    borderColor: "#8A9A86",
-    shadowColor: "#8A9A86",
+    backgroundColor: "#059669",
+    borderColor: "#059669",
+    shadowColor: "#059669",
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
@@ -896,7 +896,7 @@ const styles = StyleSheet.create({
   sheetTranscript: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 13,
-    color: "#8A9A86",
+    color: "#059669",
     fontStyle: "italic",
     textAlign: "center",
     marginBottom: 12,
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: "#8A9A86",
+    backgroundColor: "#059669",
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
