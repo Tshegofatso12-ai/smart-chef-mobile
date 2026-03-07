@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
 import { Shimmer } from "@/components/Shimmer";
 import { useAppContext } from "@/context/AppContext";
+import { fetchFoodImage } from "@/lib/pexels";
 import type { Recipe } from "@/types";
 
 const COLORS = {
@@ -33,11 +34,17 @@ function RecipeIdeaCard({
   recipe: Recipe;
   sessionId: string;
 }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { isRecipeSaved, toggleSaved } = useAppContext();
 
-  const unsplashUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(recipe.title)},food`;
+  useEffect(() => {
+    fetchFoodImage(recipe.title).then((url) => {
+      if (url) setImageUrl(url);
+      else setImageError(true);
+    });
+  }, [recipe.title]);
 
   return (
     <Pressable
@@ -62,10 +69,10 @@ function RecipeIdeaCard({
           style={StyleSheet.absoluteFillObject}
         />
 
-        {/* Unsplash image fades in on load */}
-        {!imageError && (
+        {/* Pexels image fades in on load */}
+        {!imageError && imageUrl && (
           <Image
-            source={{ uri: unsplashUrl }}
+            source={{ uri: imageUrl }}
             style={[StyleSheet.absoluteFillObject, { opacity: imageLoaded ? 1 : 0 }]}
             resizeMode="cover"
             onLoad={() => setImageLoaded(true)}
@@ -97,6 +104,10 @@ function RecipeIdeaCard({
           <Icon icon="solar:chef-hat-bold" size={28} color="rgba(255,255,255,0.9)" />
         </View>
       </View>
+
+      {imageUrl && (
+        <Text style={styles.photoDisclaimer}>Photo is illustrative — not the actual dish</Text>
+      )}
 
       {/* ── Card body ── */}
       <View style={styles.cardBody}>
@@ -369,6 +380,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingTop: 4,
+  },
+  photoDisclaimer: {
+    fontSize: 11,
+    color: "#7B8579",
+    fontStyle: "italic",
+    paddingTop: 6,
   },
   viewText: {
     fontFamily: "NunitoSans_700Bold",

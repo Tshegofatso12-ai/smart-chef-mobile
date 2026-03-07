@@ -1,16 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   Pressable,
   StyleSheet,
+  Image,
 } from "react-native";
+import { Shimmer } from "@/components/Shimmer";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
 import { useAppContext } from "@/context/AppContext";
+import { fetchFoodImage } from "@/lib/pexels";
 
 const COLORS = {
   background: "#F9F6F0",
@@ -27,6 +30,9 @@ export default function RecipeCardScreen() {
   const { id, sessionId } = useLocalSearchParams<{ id: string; sessionId: string }>();
   const { activeSession, sessions, toggleSaved, isRecipeSaved } = useAppContext();
   const [currentStep, setCurrentStep] = useState<number | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const insets = useSafeAreaInsets();
 
   const session =
@@ -54,11 +60,18 @@ export default function RecipeCardScreen() {
     );
   }
 
+  useEffect(() => {
+    fetchFoodImage(recipe.title).then((url) => {
+      if (url) setImageUrl(url);
+      else setImageError(true);
+    });
+  }, [recipe.title]);
+
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 48 }}>
 
-        {/* ── Hero gradient ── */}
+        {/* ── Hero ── */}
         <View style={{ height: 260, position: "relative" }}>
           <LinearGradient
             colors={recipe.gradientColors}
@@ -66,6 +79,16 @@ export default function RecipeCardScreen() {
             end={{ x: 1, y: 1 }}
             style={StyleSheet.absoluteFillObject}
           />
+          {!imageError && imageUrl && (
+            <Image
+              source={{ uri: imageUrl }}
+              style={[StyleSheet.absoluteFillObject, { opacity: imageLoaded ? 1 : 0 }]}
+              resizeMode="cover"
+              onLoad={() => setImageLoaded(true)}
+              onError={() => setImageError(true)}
+            />
+          )}
+          {!imageLoaded && !imageError && <Shimmer />}
           {/* Bottom fade */}
           <LinearGradient
             colors={["transparent", COLORS.background]}
@@ -89,6 +112,13 @@ export default function RecipeCardScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* ── Photo disclaimer ── */}
+        {imageUrl && (
+          <Text style={styles.photoDisclaimer}>
+            Photo is illustrative — not the actual dish
+          </Text>
+        )}
 
         {/* ── Title + Badges ── */}
         <View style={styles.titleSection}>
@@ -210,6 +240,14 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  photoDisclaimer: {
+    textAlign: "center",
+    fontSize: 11,
+    color: "#7B8579",
+    fontStyle: "italic",
+    paddingTop: 6,
+    paddingBottom: 2,
   },
   titleSection: {
     paddingHorizontal: 28,
