@@ -3,30 +3,49 @@ import {
   View,
   Text,
   TextInput,
-  Pressable,
+  TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/lib/supabase";
-import { Icon } from "@/components/Icon";
+
+const C = {
+  bg:          "#F8F7F2",
+  fg:          "#433935",
+  primary:     "#10B981",
+  primaryFg:   "#FFFFFF",
+  card:        "#FFFFFF",
+  muted:       "#E8E6E1",
+  mutedFg:     "#7B8579",
+  border:      "#E2E8F0",
+  input:       "#F0EFEA",
+  destructive: "#C97A7E",
+};
 
 type Mode = "signup" | "signin";
 
 export default function AuthScreen() {
   const { mode: initialMode } = useLocalSearchParams<{ mode?: string }>();
-  const [mode, setMode] = useState<Mode>(
-    initialMode === "signin" ? "signin" : "signup"
-  );
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [mode,            setMode]            = useState<Mode>(initialMode === "signin" ? "signin" : "signup");
+  const [email,           setEmail]           = useState("");
+  const [password,        setPassword]        = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showPassword,    setShowPassword]    = useState(false);
+  const [loading,         setLoading]         = useState(false);
+  const [error,           setError]           = useState<string | null>(null);
+
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError(null);
+    setConfirmPassword("");
+  };
 
   const handleSubmit = async () => {
     setError(null);
@@ -46,28 +65,21 @@ export default function AuthScreen() {
     setLoading(true);
     try {
       if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: email.trim(),
-          password,
-        });
-        if (signUpError) throw signUpError;
+        const { error: err } = await supabase.auth.signUp({ email: email.trim(), password });
+        if (err) throw err;
         router.replace("/onboarding/preferences");
       } else {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        const { data, error: err } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password,
         });
-        if (signInError) throw signInError;
+        if (err) throw err;
         const { data: profile } = await supabase
           .from("profiles")
           .select("onboarding_complete")
           .eq("id", data.user.id)
           .single();
-        if (profile?.onboarding_complete) {
-          router.replace("/");
-        } else {
-          router.replace("/onboarding/preferences");
-        }
+        router.replace(profile?.onboarding_complete ? "/" : "/onboarding/preferences");
       }
     } catch (err: any) {
       setError(err?.message ?? "Something went wrong. Please try again.");
@@ -76,250 +88,377 @@ export default function AuthScreen() {
     }
   };
 
+  const isSigning = mode === "signin";
+
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
+    <View style={s.root}>
+      <SafeAreaView style={s.safe}>
         <KeyboardAvoidingView
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          {/* Scrollable form */}
           <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            contentContainerStyle={s.scroll}
           >
-            {/* Back */}
-            <Pressable
-              style={({ pressed }) => [styles.backButton, { opacity: pressed ? 0.7 : 1 }]}
+            {/* ── Header: back button ── */}
+            <TouchableOpacity
               onPress={() => router.back()}
+              activeOpacity={0.7}
+              style={s.backBtn}
             >
-              <Icon icon="solar:alt-arrow-left-linear" size={22} color="#2C332A" />
-            </Pressable>
+              <Ionicons name="chevron-back" size={20} color={C.fg} />
+            </TouchableOpacity>
 
-            {/* Header */}
-            <Text style={styles.title}>
-              {mode === "signup" ? "Create account" : "Welcome back"}
+            {/* ── Copy ── */}
+            <Text style={s.title}>
+              {isSigning ? "Welcome Back! 👋" : "Join SmartChef! 👋"}
             </Text>
-            <Text style={styles.subtitle}>
-              {mode === "signup"
-                ? "Start your smart cooking journey"
-                : "Sign in to your Smart Chef account"}
+            <Text style={s.subtitle}>
+              {isSigning
+                ? "Log in to your SmartChef account to sync your saved recipes and preferences."
+                : "Create your account and start cooking smarter with AI."}
             </Text>
 
-            {/* Toggle */}
-            <View style={styles.toggle}>
-              <Pressable
-                style={[styles.toggleBtn, mode === "signup" && styles.toggleBtnActive]}
-                onPress={() => { setMode("signup"); setError(null); }}
-              >
-                <Text style={[styles.toggleText, mode === "signup" && styles.toggleTextActive]}>
-                  Sign Up
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[styles.toggleBtn, mode === "signin" && styles.toggleBtnActive]}
-                onPress={() => { setMode("signin"); setError(null); }}
-              >
-                <Text style={[styles.toggleText, mode === "signin" && styles.toggleTextActive]}>
-                  Sign In
-                </Text>
-              </Pressable>
-            </View>
-
-            {/* Fields */}
-            <View style={styles.fields}>
+            {/* ── Fields ── */}
+            <View style={s.fields}>
+              {/* Email */}
               <View>
-                <Text style={styles.label}>Email</Text>
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor="#7B8579"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  style={styles.input}
-                />
-              </View>
-
-              <View>
-                <Text style={styles.label}>Password</Text>
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Min. 6 characters"
-                  placeholderTextColor="#7B8579"
-                  secureTextEntry
-                  autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                  style={styles.input}
-                />
-              </View>
-
-              {mode === "signup" && (
-                <View>
-                  <Text style={styles.label}>Confirm Password</Text>
+                <Text style={s.label}>Email Address</Text>
+                <View style={s.inputWrap}>
+                  <Ionicons name="mail-outline" size={20} color={C.primary} style={s.inputIcon} />
                   <TextInput
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    placeholder="Repeat your password"
-                    placeholderTextColor="#7B8579"
-                    secureTextEntry
-                    autoComplete="new-password"
-                    style={styles.input}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="chef@example.com"
+                    placeholderTextColor={`${C.mutedFg}80`}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    style={s.input}
                   />
+                </View>
+              </View>
+
+              {/* Password */}
+              <View>
+                <Text style={s.label}>Password</Text>
+                <View style={s.inputWrap}>
+                  <Ionicons name="lock-closed-outline" size={20} color={C.primary} style={s.inputIcon} />
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="••••••••"
+                    placeholderTextColor={`${C.mutedFg}80`}
+                    secureTextEntry={!showPassword}
+                    autoComplete={isSigning ? "current-password" : "new-password"}
+                    style={[s.input, { paddingRight: 52 }]}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword((v) => !v)}
+                    activeOpacity={0.7}
+                    style={s.eyeBtn}
+                  >
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color={C.mutedFg}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {isSigning && (
+                  <TouchableOpacity
+                    onPress={() => Alert.alert("Coming Soon", "Password reset will be available soon.")}
+                    activeOpacity={0.7}
+                    style={s.forgotBtn}
+                  >
+                    <Text style={s.forgotText}>Forgot Password?</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Confirm password (sign up only) */}
+              {!isSigning && (
+                <View>
+                  <Text style={s.label}>Confirm Password</Text>
+                  <View style={s.inputWrap}>
+                    <Ionicons name="lock-closed-outline" size={20} color={C.primary} style={s.inputIcon} />
+                    <TextInput
+                      value={confirmPassword}
+                      onChangeText={setConfirmPassword}
+                      placeholder="••••••••"
+                      placeholderTextColor={`${C.mutedFg}80`}
+                      secureTextEntry
+                      autoComplete="new-password"
+                      style={s.input}
+                    />
+                  </View>
                 </View>
               )}
             </View>
 
-            {/* Error */}
+            {/* ── Error ── */}
             {error && (
-              <View style={styles.errorBox}>
-                <Icon icon="solar:danger-triangle-bold" size={16} color="#C97A7E" />
-                <Text style={styles.errorText}>{error}</Text>
+              <View style={s.errorBox}>
+                <Ionicons name="warning-outline" size={16} color={C.destructive} />
+                <Text style={s.errorText}>{error}</Text>
               </View>
             )}
-          </ScrollView>
 
-          {/* Sticky submit button — always visible above keyboard */}
-          <View style={styles.footer}>
-            <Pressable
-              style={({ pressed }) => [styles.submitButton, { opacity: pressed ? 0.85 : 1 }]}
+            {/* ── Primary submit ── */}
+            <TouchableOpacity
               onPress={handleSubmit}
               disabled={loading}
+              activeOpacity={0.9}
+              style={[s.submitBtn, loading && { opacity: 0.7 }]}
             >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.submitText}>
-                  {mode === "signup" ? "Create Account" : "Sign In"}
+              {loading
+                ? <ActivityIndicator color={C.primaryFg} />
+                : <Text style={s.submitBtnText}>{isSigning ? "Sign In" : "Create Account"}</Text>
+              }
+            </TouchableOpacity>
+
+            {/* ── Divider ── */}
+            <View style={s.dividerRow}>
+              <View style={s.dividerLine} />
+              <Text style={s.dividerLabel}>Or continue with</Text>
+              <View style={s.dividerLine} />
+            </View>
+
+            {/* ── Social buttons ── */}
+            <View style={s.socialRow}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={s.socialBtn}
+                onPress={() => Alert.alert("Coming Soon", "Google sign-in will be available soon.")}
+              >
+                <Ionicons name="logo-google" size={22} color={C.fg} />
+                <Text style={s.socialBtnText}>Google</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={s.socialBtn}
+                onPress={() => Alert.alert("Coming Soon", "Apple sign-in will be available soon.")}
+              >
+                <Ionicons name="logo-apple" size={22} color={C.fg} />
+                <Text style={s.socialBtnText}>Apple</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* ── Mode switch ── */}
+            <View style={s.switchRow}>
+              <Text style={s.switchText}>
+                {isSigning ? "Don't have an account? " : "Already have an account? "}
+              </Text>
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => switchMode(isSigning ? "signup" : "signin")}
+              >
+                <Text style={s.switchLink}>
+                  {isSigning ? "Sign Up" : "Sign In"}
                 </Text>
-              )}
-            </Pressable>
-          </View>
+              </TouchableOpacity>
+            </View>
+
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F6F0" },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
   safe: { flex: 1 },
-  scroll: { paddingHorizontal: 28, paddingTop: 0, paddingBottom: 16 },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
+  scroll: {
+    paddingHorizontal: 28,
+    paddingTop: 8,
+    paddingBottom: 40,
+  },
+
+  // ── Header ────────────────────────────────────────────────────────────────
+  backBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: C.card,
     borderWidth: 1,
-    borderColor: "rgba(226,223,216,0.6)",
+    borderColor: "rgba(226,232,240,0.5)",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 28,
-    marginTop: 8,
+    marginTop: 4,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 3,
     elevation: 1,
   },
+
+  // ── Copy ──────────────────────────────────────────────────────────────────
   title: {
     fontFamily: "NunitoSans_800ExtraBold",
     fontSize: 30,
-    color: "#2C332A",
-    marginBottom: 6,
+    color: C.fg,
+    marginBottom: 10,
   },
   subtitle: {
-    fontFamily: "NunitoSans_400Regular",
-    fontSize: 14,
-    color: "#7B8579",
-    marginBottom: 28,
+    fontFamily: "NunitoSans_600SemiBold",
+    fontSize: 15,
+    color: C.mutedFg,
+    lineHeight: 22,
+    marginBottom: 32,
   },
-  toggle: {
+
+  // ── Fields ────────────────────────────────────────────────────────────────
+  fields: { gap: 20, marginBottom: 24 },
+  label: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 13,
+    color: C.mutedFg,
+    marginBottom: 8,
+    marginLeft: 16,
+  },
+  inputWrap: {
+    position: "relative",
     flexDirection: "row",
-    backgroundColor: "#F0EFEA",
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 28,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
     alignItems: "center",
   },
-  toggleBtnActive: {
-    backgroundColor: "#FFFFFF",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  toggleText: {
-    fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 14,
-    color: "#7B8579",
-  },
-  toggleTextActive: {
-    color: "#2C332A",
-    fontFamily: "NunitoSans_700Bold",
-  },
-  fields: { gap: 16, marginBottom: 20 },
-  label: {
-    fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 13,
-    color: "#2C332A",
-    marginBottom: 6,
+  inputIcon: {
+    position: "absolute",
+    left: 18,
+    zIndex: 1,
   },
   input: {
-    height: 52,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    backgroundColor: "#F0EFEA",
+    flex: 1,
+    height: 64,
+    paddingLeft: 52,
+    paddingRight: 20,
+    borderRadius: 32,
+    backgroundColor: C.input,
     borderWidth: 2,
     borderColor: "transparent",
-    fontFamily: "NunitoSans_400Regular",
+    fontFamily: "NunitoSans_600SemiBold",
     fontSize: 15,
-    color: "#2C332A",
+    color: C.fg,
   },
+  eyeBtn: {
+    position: "absolute",
+    right: 18,
+    padding: 4,
+  },
+  forgotBtn: {
+    alignSelf: "flex-end",
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  forgotText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 13,
+    color: C.primary,
+  },
+
+  // ── Error ─────────────────────────────────────────────────────────────────
   errorBox: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     backgroundColor: "rgba(201,122,126,0.08)",
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 20,
   },
   errorText: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 13,
-    color: "#C97A7E",
+    color: C.destructive,
     flex: 1,
   },
-  footer: {
-    paddingHorizontal: 28,
-    paddingBottom: 16,
-    paddingTop: 8,
-    backgroundColor: "#F9F6F0",
-  },
-  submitButton: {
-    height: 56,
-    borderRadius: 999,
-    backgroundColor: "#059669",
+
+  // ── Submit ────────────────────────────────────────────────────────────────
+  submitBtn: {
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: C.primary,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 6 },
+    marginBottom: 28,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowRadius: 24,
+    elevation: 8,
   },
-  submitText: {
+  submitBtnText: {
     fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 16,
-    color: "#FFFFFF",
+    fontSize: 18,
+    color: C.primaryFg,
+  },
+
+  // ── Divider ───────────────────────────────────────────────────────────────
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(226,232,240,0.5)",
+  },
+  dividerLabel: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 11,
+    color: C.mutedFg,
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+  },
+
+  // ── Social ────────────────────────────────────────────────────────────────
+  socialRow: {
+    flexDirection: "row",
+    gap: 14,
+    marginBottom: 32,
+  },
+  socialBtn: {
+    flex: 1,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: "rgba(226,232,240,0.5)",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  socialBtnText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 15,
+    color: C.fg,
+  },
+
+  // ── Mode switch ───────────────────────────────────────────────────────────
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  switchText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 14,
+    color: C.mutedFg,
+  },
+  switchLink: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 14,
+    color: C.primary,
   },
 });

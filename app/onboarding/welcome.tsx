@@ -1,132 +1,216 @@
 import React from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
-import { Icon } from "@/components/Icon";
+import { Ionicons } from "@expo/vector-icons";
+
+const C = {
+  bg:        "#F8F7F2",
+  fg:        "#433935",
+  primary:   "#10B981",
+  primaryFg: "#FFFFFF",
+  muted:     "#E8E6E1",
+  mutedFg:   "#7B8579",
+};
 
 export default function WelcomeScreen() {
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
-        {/* Hero */}
-        <View style={styles.hero}>
-          <LinearGradient
-            colors={["#34D399", "#059669", "#047857"]}
-            start={{ x: 0.15, y: 0 }}
-            end={{ x: 0.85, y: 1 }}
-            style={styles.iconCircle}
-          >
-            <Icon icon="solar:chef-hat-bold" size={56} color="#FFFFFF" />
-          </LinearGradient>
+    <View style={s.root}>
+      {/* Top-half green tint */}
+      <View style={s.topGlow} pointerEvents="none" />
 
-          <Text style={styles.appName}>Smart Chef</Text>
-          <Text style={styles.headline}>Cook smarter,{"\n"}eat better.</Text>
-          <Text style={styles.subtitle}>
-            Scan your ingredients and get personalised recipes in seconds — powered by AI.
+      <SafeAreaView style={s.safe}>
+
+        {/* ── Hero ── */}
+        <View style={s.heroSection}>
+          {/* Blurred green glow behind image */}
+          <View style={s.imageGlow} />
+          <Image
+            source={{ uri: "https://ggrhecslgdflloszjkwl.supabase.co/storage/v1/object/public/user-assets/IXNk5Fj0Ara/components/cuS9v6ffnRD.png" }}
+            style={s.heroImage}
+            resizeMode="contain"
+          />
+        </View>
+
+        {/* ── Copy ── */}
+        <View style={s.copySection}>
+          <Text style={s.headline}>
+            {"Cook Smarter with "}
+            <Text style={s.headlinePrimary}>Magic Scan</Text>
+          </Text>
+          <Text style={s.subtitle}>
+            Transform your ingredients into gourmet recipes using AI vision.
           </Text>
         </View>
 
-        {/* CTAs */}
-        <View style={styles.actions}>
-          <Pressable
-            style={({ pressed }) => [styles.primaryButton, { opacity: pressed ? 0.85 : 1 }]}
+        {/* ── Pagination dots ── */}
+        <View style={s.dots}>
+          <View style={[s.dot, s.dotActive]} />
+          <View style={s.dot} />
+          <View style={s.dot} />
+        </View>
+
+        {/* ── Actions ── */}
+        <View style={s.actions}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={s.primaryBtn}
             onPress={() => router.push({ pathname: "/onboarding/auth", params: { mode: "signup" } })}
           >
-            <LinearGradient
-              colors={["#34D399", "#059669"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.primaryGradient}
-            >
-              <Text style={styles.primaryButtonText}>Get Started</Text>
-              <Icon icon="solar:alt-arrow-right-linear" size={18} color="#FFFFFF" />
-            </LinearGradient>
-          </Pressable>
+            <Text style={s.primaryBtnText}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={22} color={C.primaryFg} />
+          </TouchableOpacity>
 
-          <Pressable
-            style={({ pressed }) => [styles.secondaryButton, { opacity: pressed ? 0.7 : 1 }]}
-            onPress={() => router.push({ pathname: "/onboarding/auth", params: { mode: "signin" } })}
-          >
-            <Text style={styles.secondaryButtonText}>Already have an account? Sign In</Text>
-          </Pressable>
+          <View style={s.signInRow}>
+            <Text style={s.signInText}>Already have an account? </Text>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => router.push({ pathname: "/onboarding/auth", params: { mode: "signin" } })}
+            >
+              <Text style={s.signInLink}>Log In</Text>
+            </TouchableOpacity>
+          </View>
         </View>
+
       </SafeAreaView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#F9F6F0" },
-  safe: { flex: 1, paddingHorizontal: 32 },
-  hero: { flex: 1, alignItems: "center", justifyContent: "center", gap: 0 },
-  iconCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 32,
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+
+  // Soft green wash over the top half of the screen
+  topGlow: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: "50%",
+    backgroundColor: "rgba(16,185,129,0.07)",
+  },
+
+  safe: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+
+  // ── Hero ──────────────────────────────────────────────────────────────────
+  heroSection: {
+    flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 28,
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 12,
   },
-  appName: {
-    fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 13,
-    color: "#059669",
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginBottom: 10,
+  imageGlow: {
+    position: "absolute",
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: "rgba(16,185,129,0.18)",
+    // blur approximated with a large, soft shadow
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 60,
+    elevation: 0,
+  },
+  heroImage: {
+    width: 300,
+    height: 300,
+  },
+
+  // ── Copy ─────────────────────────────────────────────────────────────────
+  copySection: {
+    alignItems: "center",
+    marginBottom: 28,
+    gap: 12,
   },
   headline: {
-    fontFamily: "PlayfairDisplay_700Bold",
-    fontSize: 40,
-    color: "#2C332A",
+    fontFamily: "NunitoSans_800ExtraBold",
+    fontSize: 34,
+    color: C.fg,
     textAlign: "center",
-    lineHeight: 50,
-    marginBottom: 16,
+    lineHeight: 42,
+  },
+  headlinePrimary: {
+    color: C.primary,
+    textDecorationLine: "underline",
+    textDecorationColor: "rgba(16,185,129,0.3)",
   },
   subtitle: {
-    fontFamily: "NunitoSans_400Regular",
-    fontSize: 15,
-    color: "#7B8579",
+    fontFamily: "NunitoSans_600SemiBold",
+    fontSize: 16,
+    color: C.mutedFg,
     textAlign: "center",
-    lineHeight: 22,
-    paddingHorizontal: 8,
+    lineHeight: 24,
+    maxWidth: 280,
   },
-  actions: { paddingBottom: 16, gap: 12 },
-  primaryButton: {
-    borderRadius: 999,
-    overflow: "hidden",
-    shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 6,
-  },
-  primaryGradient: {
+
+  // ── Dots ──────────────────────────────────────────────────────────────────
+  dots: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 18,
-    paddingHorizontal: 40,
+    gap: 6,
+    marginBottom: 28,
   },
-  primaryButtonText: {
-    fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 16,
-    color: "#FFFFFF",
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: C.muted,
   },
-  secondaryButton: {
+  dotActive: {
+    width: 32,
+    backgroundColor: C.primary,
+  },
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  actions: {
+    gap: 16,
+    paddingBottom: 8,
+  },
+  primaryBtn: {
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: C.primary,
+    flexDirection: "row",
     alignItems: "center",
-    paddingVertical: 14,
+    justifyContent: "center",
+    gap: 10,
+    shadowColor: "#10B981",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+    elevation: 8,
   },
-  secondaryButtonText: {
-    fontFamily: "NunitoSans_600SemiBold",
+  primaryBtnText: {
+    fontFamily: "NunitoSans_800ExtraBold",
+    fontSize: 18,
+    color: C.primaryFg,
+    letterSpacing: -0.3,
+  },
+  signInRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  signInText: {
+    fontFamily: "NunitoSans_700Bold",
     fontSize: 14,
-    color: "#7B8579",
+    color: C.mutedFg,
+  },
+  signInLink: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 14,
+    color: C.primary,
   },
 });
