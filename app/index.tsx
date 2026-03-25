@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -40,7 +40,7 @@ import {
   extractIngredientsFromText,
   extractIngredientsFromImage,
 } from "@/lib/api";
-import type { DietFilter } from "@/types";
+import type { DietFilter, Recipe, RecipeSession } from "@/types";
 
 const C = {
   background:        "#F9F6F0",
@@ -77,6 +77,9 @@ export default function HomeScreen() {
     setActiveDietFilter,
     setTrayIngredients,
     setScannedImageUri,
+    sessions,
+    isRecipeSaved,
+    toggleSaved,
   } = useAppContext();
   const { profile, user } = useAuthContext();
   const insets = useSafeAreaInsets();
@@ -91,6 +94,24 @@ export default function HomeScreen() {
   const [ingredientInput, setIngredientInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [isTextLoading, setIsTextLoading] = useState(false);
+
+  // ─── Recipe search results ────────────────────────────────────────────────
+  const recipeResults = useMemo<{ recipe: Recipe; session: RecipeSession }[]>(() => {
+    if (searchMode !== "recipes" || !ingredientInput.trim()) return [];
+    const q = ingredientInput.trim().toLowerCase();
+    const results: { recipe: Recipe; session: RecipeSession }[] = [];
+    for (const session of sessions) {
+      for (const recipe of session.recipes) {
+        if (
+          recipe.title.toLowerCase().includes(q) ||
+          recipe.ingredients.some((ing) => ing.toLowerCase().includes(q))
+        ) {
+          results.push({ recipe, session });
+        }
+      }
+    }
+    return results;
+  }, [searchMode, ingredientInput, sessions]);
   const [isScanLoading, setIsScanLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isVoiceLoading, setIsVoiceLoading] = useState(false);
@@ -129,6 +150,16 @@ export default function HomeScreen() {
   const handleTextSubmit = async () => {
     const text = ingredientInput.trim();
     if (!text) return;
+
+    // Recipes mode: navigate directly to the best match
+    if (searchMode === "recipes") {
+      if (recipeResults.length > 0) {
+        const { recipe, session } = recipeResults[0];
+        router.push({ pathname: "/recipe/[id]", params: { id: recipe.id, sessionId: session.id } });
+      }
+      return;
+    }
+
     setIsTextLoading(true);
     try {
       const ingredients = await extractIngredientsFromText(text);
@@ -326,76 +357,132 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Main centred area ── */}
-        <View style={s.main}>
-          {/* Magic Scan 3D button */}
-          <Animated.View style={scanAnimStyle}>
-            <TouchableOpacity
-              onPress={handleMagicScan}
-              onPressIn={() => { scanScale.value = withSpring(0.92, { damping: 14, stiffness: 450 }); }}
-              onPressOut={() => { scanScale.value = withSpring(1,    { damping: 11, stiffness: 280 }); }}
-              activeOpacity={1}
-            >
-              <View style={s.scanShadowWrap}>
-                <LinearGradient
-                  colors={["#6EE7B7", "#059669", "#047857"]}
-                  start={{ x: 0.15, y: 0 }}
-                  end={{ x: 0.85, y: 1 }}
-                  style={s.scanButton}
+        {/* ── Recipe search results (recipes mode + query active) ── */}
+        {searchMode === "recipes" && ingredientInput.trim() ? (
+          <ScrollView
+            style={{ flex: 1 }}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: insets.bottom + 100, paddingTop: 8, gap: 12 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {recipeResults.length > 0 ? (
+              recipeResults.map(({ recipe, session }) => (
+                <TouchableOpacity
+                  key={recipe.id}
+                  onPress={() =>
+                    router.push({ pathname: "/recipe/[id]", params: { id: recipe.id, sessionId: session.id } })
+                  }
+                  style={s.resultCard}
+                  activeOpacity={0.9}
                 >
-                  <LinearGradient
-                    colors={["rgba(255,255,255,0.38)", "rgba(255,255,255,0.10)", "transparent"]}
-                    start={{ x: 0.5, y: 0 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={s.scanGloss}
-                  />
-                  <LinearGradient
-                    colors={["transparent", "rgba(0,0,0,0.18)"]}
-                    start={{ x: 0.5, y: 0.6 }}
-                    end={{ x: 0.5, y: 1 }}
-                    style={s.scanRim}
-                  />
-                  <View style={s.scanIconCircle}>
-                    <Icon icon="solar:scanner-2-bold-duotone" size={44} color={C.primaryForeground} />
+                  <View style={{ flex: 1, gap: 6, paddingRight: 48 }}>
+                    <Text style={s.resultTitle} numberOfLines={2}>{recipe.title}</Text>
+                    <View style={s.resultMeta}>
+                      <View style={s.resultMetaItem}>
+                        <Icon icon="solar:fire-bold" size={13} color={C.chart2} />
+                        <Text style={s.resultMetaText}>{recipe.calories}</Text>
+                      </View>
+                      <View style={s.resultMetaItem}>
+                        <Icon icon="solar:clock-circle-bold" size={13} color={C.chart3} />
+                        <Text style={s.resultMetaText}>{recipe.cookTime}</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={{ alignItems: "center" }}>
-                    <Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: C.primaryForeground, letterSpacing: -0.5 }}>
-                      Magic Scan
-                    </Text>
-                    <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
-                      Tap to scan ingredients
-                    </Text>
-                  </View>
-                </LinearGradient>
+                  <TouchableOpacity
+                    onPress={() => toggleSaved(recipe.id, session.id)}
+                    style={s.resultBookmark}
+                    activeOpacity={0.8}
+                  >
+                    <Icon
+                      icon={isRecipeSaved(recipe.id) ? "solar:bookmark-bold" : "solar:bookmark-outline"}
+                      size={20}
+                      color={C.primary}
+                    />
+                  </TouchableOpacity>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={s.noResults}>
+                <Icon icon="solar:magnifer-bold-duotone" size={40} color={C.mutedForeground} />
+                <Text style={s.noResultsTitle}>No recipes found</Text>
+                <Text style={s.noResultsSub}>
+                  Try scanning ingredients to generate recipes with "{ingredientInput.trim()}".
+                </Text>
               </View>
-            </TouchableOpacity>
-          </Animated.View>
+            )}
+          </ScrollView>
+        ) : (
+          /* ── Hero (default state) ── */
+          <View style={s.main}>
+            {/* Magic Scan 3D button */}
+            <Animated.View style={scanAnimStyle}>
+              <TouchableOpacity
+                onPress={handleMagicScan}
+                onPressIn={() => { scanScale.value = withSpring(0.92, { damping: 14, stiffness: 450 }); }}
+                onPressOut={() => { scanScale.value = withSpring(1,    { damping: 11, stiffness: 280 }); }}
+                activeOpacity={1}
+              >
+                <View style={s.scanShadowWrap}>
+                  <LinearGradient
+                    colors={["#6EE7B7", "#059669", "#047857"]}
+                    start={{ x: 0.15, y: 0 }}
+                    end={{ x: 0.85, y: 1 }}
+                    style={s.scanButton}
+                  >
+                    <LinearGradient
+                      colors={["rgba(255,255,255,0.38)", "rgba(255,255,255,0.10)", "transparent"]}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={s.scanGloss}
+                    />
+                    <LinearGradient
+                      colors={["transparent", "rgba(0,0,0,0.18)"]}
+                      start={{ x: 0.5, y: 0.6 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={s.scanRim}
+                    />
+                    <View style={s.scanIconCircle}>
+                      <Icon icon="solar:scanner-2-bold-duotone" size={44} color={C.primaryForeground} />
+                    </View>
+                    <View style={{ alignItems: "center" }}>
+                      <Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: C.primaryForeground, letterSpacing: -0.5 }}>
+                        Magic Scan
+                      </Text>
+                      <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
+                        Tap to scan ingredients
+                      </Text>
+                    </View>
+                  </LinearGradient>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
 
-          {/* Voice button */}
-          <View style={s.voiceWrap}>
-            <TouchableOpacity
-              onPress={handleVoice}
-              style={[s.voiceBtn, isListening && s.voiceBtnActive]}
-              activeOpacity={0.85}
-            >
-              {isVoiceLoading ? (
-                <ActivityIndicator size="small" color={C.primary} />
-              ) : (
-                <Icon
-                  icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
-                  size={24}
-                  color={isListening ? C.primaryForeground : C.primary}
-                />
-              )}
-              <Text style={[s.voiceBtnText, isListening && { color: C.primaryForeground }]}>
-                {isListening ? "Listening…" : isVoiceLoading ? "Processing…" : "Speak Your Ingredients"}
+            {/* Voice button */}
+            <View style={s.voiceWrap}>
+              <TouchableOpacity
+                onPress={handleVoice}
+                style={[s.voiceBtn, isListening && s.voiceBtnActive]}
+                activeOpacity={0.85}
+              >
+                {isVoiceLoading ? (
+                  <ActivityIndicator size="small" color={C.primary} />
+                ) : (
+                  <Icon
+                    icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
+                    size={24}
+                    color={isListening ? C.primaryForeground : C.primary}
+                  />
+                )}
+                <Text style={[s.voiceBtnText, isListening && { color: C.primaryForeground }]}>
+                  {isListening ? "Listening…" : isVoiceLoading ? "Processing…" : "Speak Your Ingredients"}
+                </Text>
+              </TouchableOpacity>
+              <Text style={s.voiceTagline}>
+                Don't feel like scanning? Just tell SmartChef what you have.
               </Text>
-            </TouchableOpacity>
-            <Text style={s.voiceTagline}>
-              Don't feel like scanning? Just tell SmartChef what you have.
-            </Text>
+            </View>
           </View>
-        </View>
+        )}
 
       </SafeAreaView>
 
@@ -670,6 +757,73 @@ const s = StyleSheet.create({
     textAlign: "center",
     lineHeight: 16,
     paddingHorizontal: 16,
+  },
+
+  // ── Recipe search results ─────────────────────────────────────────────────
+  resultCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(226,223,216,0.5)",
+    padding: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  resultTitle: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 15,
+    color: "#2C332A",
+    lineHeight: 20,
+  },
+  resultMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+  },
+  resultMetaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  resultMetaText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 12,
+    color: "#7B8579",
+  },
+  resultBookmark: {
+    position: "absolute",
+    right: 16,
+    top: "50%",
+    marginTop: -20,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: "rgba(5,150,105,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noResults: {
+    alignItems: "center",
+    paddingVertical: 64,
+    gap: 12,
+  },
+  noResultsTitle: {
+    fontFamily: "NunitoSans_800ExtraBold",
+    fontSize: 18,
+    color: "#2C332A",
+  },
+  noResultsSub: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 14,
+    color: "#7B8579",
+    textAlign: "center",
+    lineHeight: 20,
+    maxWidth: 260,
   },
 
   // ── Bottom nav ────────────────────────────────────────────────────────────
