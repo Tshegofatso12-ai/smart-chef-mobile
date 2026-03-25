@@ -6,8 +6,16 @@ import type { Ingredient, Recipe, DietFilter } from "@/types";
 /** Extract the actual server error message from a FunctionsHttpError. */
 async function extractFunctionError(error: unknown): Promise<string> {
   try {
-    const body = await (error as any).context?.json?.();
-    if (body?.error) return body.error;
+    const context = (error as any).context;
+    if (context && typeof context.text === "function") {
+      const text: string = await context.text();
+      try {
+        const body = JSON.parse(text);
+        if (body?.error) return String(body.error);
+      } catch {
+        if (text.trim()) return text.trim();
+      }
+    }
   } catch {}
   return (error as any)?.message ?? String(error);
 }
