@@ -1,5 +1,5 @@
 import { supabase } from "@/lib/supabase";
-import type { Ingredient, Recipe, DietFilter } from "@/types";
+import type { Ingredient, Recipe, DietFilter, RecipeSession } from "@/types";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -129,6 +129,33 @@ export async function applyIngredientFix(
       wide: false,
     };
   });
+}
+
+// ─── Generate recipes ────────────────────────────────────────────────────────
+
+// ─── Search recipe by query (AI-generated) ───────────────────────────────────
+
+export async function searchRecipeByQuery(
+  query: string,
+  dietFilter: DietFilter | null
+): Promise<{ sessionId: string; recipe: Recipe; session: RecipeSession }> {
+  const { data, error } = await supabase.functions.invoke("search-recipe", {
+    body: { query, dietFilter },
+  });
+  if (error) {
+    const detail = await extractFunctionError(error);
+    throw new Error(detail);
+  }
+  const { sessionId, recipe } = data as { sessionId: string; recipe: Recipe };
+  // Build a minimal RecipeSession so the client can merge it into state
+  const session: RecipeSession = {
+    id: sessionId,
+    createdAt: Date.now(),
+    ingredients: [{ id: "search", name: query, subtitle: "AI Search", image: "", wide: false }],
+    dietFilter,
+    recipes: [recipe],
+  };
+  return { sessionId, recipe, session };
 }
 
 // ─── Generate recipes ────────────────────────────────────────────────────────

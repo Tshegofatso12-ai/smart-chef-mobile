@@ -39,6 +39,7 @@ import { useAuthContext } from "@/context/AuthContext";
 import {
   extractIngredientsFromText,
   extractIngredientsFromImage,
+  searchRecipeByQuery,
 } from "@/lib/api";
 import type { DietFilter, Recipe, RecipeSession } from "@/types";
 
@@ -80,6 +81,7 @@ export default function HomeScreen() {
     sessions,
     isRecipeSaved,
     toggleSaved,
+    addSession,
   } = useAppContext();
   const { profile, user } = useAuthContext();
   const insets = useSafeAreaInsets();
@@ -94,6 +96,10 @@ export default function HomeScreen() {
   const [ingredientInput, setIngredientInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [isTextLoading, setIsTextLoading] = useState(false);
+  const [isScanLoading, setIsScanLoading] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [isVoiceLoading, setIsVoiceLoading] = useState(false);
+  const [isAiSearchLoading, setIsAiSearchLoading] = useState(false);
 
   // ─── Recipe search results ────────────────────────────────────────────────
   const recipeResults = useMemo<{ recipe: Recipe; session: RecipeSession }[]>(() => {
@@ -112,9 +118,6 @@ export default function HomeScreen() {
     }
     return results;
   }, [searchMode, ingredientInput, sessions]);
-  const [isScanLoading, setIsScanLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isVoiceLoading, setIsVoiceLoading] = useState(false);
   const transcriptRef = useRef("");
 
   // ─── Speech recognition events ────────────────────────────────────────────
@@ -147,15 +150,30 @@ export default function HomeScreen() {
   });
 
   // ─── Handlers ──────────────────────────────────────────────────────────────
+  const handleAiSearch = async (query: string) => {
+    setIsAiSearchLoading(true);
+    try {
+      const { sessionId, recipe, session } = await searchRecipeByQuery(query, activeDietFilter);
+      await addSession(session);
+      router.push({ pathname: "/recipe/[id]", params: { id: recipe.id, sessionId } });
+    } catch (err: any) {
+      Alert.alert("Error", err?.message ?? "Could not generate recipe. Please try again.");
+    } finally {
+      setIsAiSearchLoading(false);
+    }
+  };
+
   const handleTextSubmit = async () => {
     const text = ingredientInput.trim();
     if (!text) return;
 
-    // Recipes mode: navigate directly to the best match
+    // Recipes mode: navigate to best local match or trigger AI generation
     if (searchMode === "recipes") {
       if (recipeResults.length > 0) {
         const { recipe, session } = recipeResults[0];
         router.push({ pathname: "/recipe/[id]", params: { id: recipe.id, sessionId: session.id } });
+      } else {
+        handleAiSearch(text);
       }
       return;
     }
@@ -406,8 +424,23 @@ export default function HomeScreen() {
                 <Icon icon="solar:magnifer-bold-duotone" size={40} color={C.mutedForeground} />
                 <Text style={s.noResultsTitle}>No recipes found</Text>
                 <Text style={s.noResultsSub}>
-                  Try scanning ingredients to generate recipes with "{ingredientInput.trim()}".
+                  No saved recipes match "{ingredientInput.trim()}". Let AI generate one for you.
                 </Text>
+                <TouchableOpacity
+                  onPress={() => handleAiSearch(ingredientInput.trim())}
+                  style={s.aiGenerateBtn}
+                  activeOpacity={0.88}
+                  disabled={isAiSearchLoading}
+                >
+                  {isAiSearchLoading ? (
+                    <ActivityIndicator size="small" color={C.primaryForeground} />
+                  ) : (
+                    <Icon icon="solar:magic-stick-3-bold" size={20} color={C.primaryForeground} />
+                  )}
+                  <Text style={s.aiGenerateBtnText}>
+                    {isAiSearchLoading ? "Generating…" : `Generate "${ingredientInput.trim()}"`}
+                  </Text>
+                </TouchableOpacity>
               </View>
             )}
           </ScrollView>
@@ -507,8 +540,12 @@ export default function HomeScreen() {
       </View>
 
       <LoadingOverlay
-        visible={isScanLoading || isVoiceLoading}
-        message={isScanLoading ? "Scanning ingredients..." : "Processing voice..."}
+        visible={isScanLoading || isVoiceLoading || isAiSearchLoading}
+        message={
+          isScanLoading ? "Scanning ingredients..." :
+          isVoiceLoading ? "Processing voice..." :
+          "Generating recipe…"
+        }
       />
     </View>
   );
@@ -824,6 +861,26 @@ const s = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     maxWidth: 260,
+  },
+  aiGenerateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 8,
+    paddingHorizontal: 28,
+    paddingVertical: 16,
+    borderRadius: 32,
+    backgroundColor: "#059669",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  aiGenerateBtnText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 15,
+    color: "#FFFFFF",
   },
 
   // ── Bottom nav ────────────────────────────────────────────────────────────
