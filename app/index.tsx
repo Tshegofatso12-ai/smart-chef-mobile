@@ -4,14 +4,13 @@ import {
   Text,
   TextInput,
   ScrollView,
-  Pressable,
   TouchableOpacity,
   Image,
   StyleSheet,
   Alert,
   ActivityIndicator,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -83,6 +82,7 @@ export default function HomeScreen() {
     sessions,
   } = useAppContext();
   const { profile, user } = useAuthContext();
+  const insets = useSafeAreaInsets();
 
   // ─── Magic Scan spring animation ─────────────────────────────────────────
   const scanScale = useSharedValue(1);
@@ -222,7 +222,7 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>
-      <SafeAreaView style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
 
         {/* ── Header ── */}
         <View style={styles.header}>
@@ -264,7 +264,7 @@ export default function HomeScreen() {
           {DIET_FILTERS.map((filter) => {
             const isActive = activeDietFilter === filter.id;
             return (
-              <Pressable
+              <TouchableOpacity
                 key={filter.id}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -276,6 +276,7 @@ export default function HomeScreen() {
                     ? [styles.filterPillActive, { backgroundColor: filter.activeColor, shadowColor: filter.activeColor }]
                     : styles.filterPillInactive,
                 ]}
+                activeOpacity={0.85}
               >
                 <Icon icon={filter.icon} size={16} color={isActive ? COLORS.primaryForeground : COLORS.mutedForeground} />
                 <Text style={[styles.filterLabel, { color: isActive ? COLORS.primaryForeground : COLORS.foreground }]}>
@@ -284,7 +285,7 @@ export default function HomeScreen() {
                 {isActive && (
                   <Icon icon="hugeicons:cancel-01" size={12} color="rgba(255,255,255,0.7)" />
                 )}
-              </Pressable>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
@@ -306,16 +307,17 @@ export default function HomeScreen() {
               returnKeyType="send"
               style={[styles.input, inputFocused && styles.inputFocused, { fontFamily: "NunitoSans_600SemiBold", paddingRight: 56 }]}
             />
-            <Pressable
+            <TouchableOpacity
               onPress={handleTextSubmit}
               style={[styles.sendButton, { opacity: ingredientInput.trim() ? 1 : 0.4 }]}
               disabled={!ingredientInput.trim() || isTextLoading}
+              activeOpacity={0.85}
             >
               {isTextLoading
                 ? <ActivityIndicator size="small" color={COLORS.primaryForeground} />
                 : <Icon icon="solar:send-bold" size={16} color={COLORS.primaryForeground} />
               }
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -323,12 +325,12 @@ export default function HomeScreen() {
         <ScrollView
           style={{ flex: 1 }}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
         >
           {/* Magic Scan Button — 3D squishy */}
           <View style={{ alignItems: "center", paddingVertical: 8 }}>
             <Animated.View style={scanAnimStyle}>
-              <Pressable
+              <TouchableOpacity
                 onPress={handleMagicScan}
                 onPressIn={() => {
                   scanScale.value = withSpring(0.92, { damping: 14, stiffness: 450 });
@@ -336,6 +338,7 @@ export default function HomeScreen() {
                 onPressOut={() => {
                   scanScale.value = withSpring(1, { damping: 11, stiffness: 280 });
                 }}
+                activeOpacity={1}
               >
                 <View style={styles.scanShadowWrap}>
                   <LinearGradient
@@ -369,7 +372,7 @@ export default function HomeScreen() {
                     </View>
                   </LinearGradient>
                 </View>
-              </Pressable>
+              </TouchableOpacity>
             </Animated.View>
           </View>
 
@@ -406,12 +409,13 @@ export default function HomeScreen() {
               </View>
 
               {isListening && (
-                <Pressable
+                <TouchableOpacity
                   onPress={handleVoice}
                   style={styles.voiceStopButton}
+                  activeOpacity={0.8}
                 >
                   <Text style={styles.voiceStopText}>Stop</Text>
-                </Pressable>
+                </TouchableOpacity>
               )}
             </View>
           </View>
@@ -421,9 +425,9 @@ export default function HomeScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Recent Scans</Text>
-                <Pressable onPress={() => router.push({ pathname: "/saved", params: { tab: "history" } })}>
+                <TouchableOpacity onPress={() => router.push({ pathname: "/saved", params: { tab: "history" } })} activeOpacity={0.7}>
                   <Text style={styles.sectionLink}>View All</Text>
-                </Pressable>
+                </TouchableOpacity>
               </View>
               <ScrollView
                 horizontal
@@ -457,11 +461,11 @@ export default function HomeScreen() {
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Saved Recipes</Text>
-                <Pressable onPress={() => router.push("/saved")}>
+                <TouchableOpacity onPress={() => router.push("/saved")} activeOpacity={0.7}>
                   <Text style={styles.sectionLink}>View All</Text>
-                </Pressable>
+                </TouchableOpacity>
               </View>
-              <View style={{ gap: 12 }}>
+              <View style={{ gap: 12, paddingHorizontal: 24 }}>
                 {savedEntries.map(({ recipe, session }) => (
                   <RecipeRow key={recipe.id} recipe={recipe} sessionId={session.id} isSaved />
                 ))}
@@ -471,6 +475,26 @@ export default function HomeScreen() {
 
         </ScrollView>
       </SafeAreaView>
+
+      {/* ── Bottom nav ── */}
+      <View style={[styles.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
+        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+          <Icon icon="solar:home-2-bold-duotone" size={24} color={COLORS.primary} />
+          <Text style={[styles.navLabel, { color: COLORS.primary }]}>Home</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
+          <Icon icon="solar:magnifer-bold-duotone" size={24} color={COLORS.mutedForeground} />
+          <Text style={[styles.navLabel, { color: COLORS.mutedForeground }]}>Explore</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/saved")} style={styles.navItem} activeOpacity={0.7}>
+          <Icon icon="solar:chef-hat-bold-duotone" size={24} color={COLORS.mutedForeground} />
+          <Text style={[styles.navLabel, { color: COLORS.mutedForeground }]}>Recipes</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => router.push("/profile")} style={styles.navItem} activeOpacity={0.7}>
+          <Icon icon="solar:user-bold-duotone" size={24} color={COLORS.mutedForeground} />
+          <Text style={[styles.navLabel, { color: COLORS.mutedForeground }]}>Profile</Text>
+        </TouchableOpacity>
+      </View>
 
       <LoadingOverlay
         visible={isScanLoading || isVoiceLoading}
@@ -645,26 +669,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#059669",
   },
-  listCard: {
-    marginHorizontal: 24,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(226,223,216,0.5)",
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-    padding: 20,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: "rgba(226,223,216,0.6)",
-    marginHorizontal: 16,
-    
-  },
   voiceCard: {
     marginHorizontal: 24,
     backgroundColor: "#FFFFFF",
@@ -779,5 +783,29 @@ const styles = StyleSheet.create({
     fontFamily: "NunitoSans_400Regular",
     fontSize: 11,
     color: "#7B8579",
+  },
+
+  // ── Bottom nav ────────────────────────────────────────────────────────────
+  bottomNav: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    backgroundColor: "rgba(249,246,240,0.95)",
+    borderTopWidth: 1,
+    borderTopColor: "rgba(226,223,216,0.5)",
+  },
+  navItem: {
+    flex: 1,
+    alignItems: "center",
+    gap: 4,
+  },
+  navLabel: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 10,
   },
 });
