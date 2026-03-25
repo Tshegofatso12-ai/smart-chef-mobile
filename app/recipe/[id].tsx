@@ -134,6 +134,7 @@ export default function RecipeCardScreen() {
             <Icon icon="solar:fire-bold-duotone" size={26} color={C.destructive} />
             <Text style={s.statLabel}>Calories</Text>
             <Text style={s.statValue}>{recipe.calories}</Text>
+            <Text style={s.statSub}>per serving</Text>
           </View>
           {/* Match */}
           <View style={s.statCard}>
@@ -353,6 +354,13 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: "#2C332A",
     textAlign: "center",
+  },
+  statSub: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 9,
+    color: "#7B8579",
+    textAlign: "center",
+    marginTop: -2,
   },
 
   // ── Section headers ───────────────────────────────────────────────────────

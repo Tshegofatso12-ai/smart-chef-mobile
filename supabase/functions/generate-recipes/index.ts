@@ -178,7 +178,7 @@ Each object must have these exact fields:
 - id: string (e.g. "r1", "r2", "r3")
 - title: string (creative, descriptive name)
 - cookTime: string (e.g. "20 min")
-- calories: string (estimated, e.g. "380 kcal")
+- calories: string (estimated per serving, e.g. "380 kcal")
 - dietMatch: one of "low-fat" | "low-carb" | "high-protein" | "keto" | "vegan"
 - ingredients: string[] (each like "2 Chicken Breasts", "1 Cup Spinach")
 - steps: string[] (4-5 clear cooking steps, each a complete sentence)
