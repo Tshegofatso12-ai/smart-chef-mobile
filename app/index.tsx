@@ -239,7 +239,7 @@ export default function HomeScreen() {
           </View>
           <Pressable
             onPress={handleAvatarPress}
-            style={({ pressed }) => [styles.avatarContainer, { opacity: pressed ? 0.8 : 1 }]}
+            style={({ pressed }) => [styles.avatarContainer, { opacity: pressed ? 0.75 : 1 }]}
           >
             {profile?.avatar_url ? (
               <Image
@@ -248,7 +248,9 @@ export default function HomeScreen() {
                 resizeMode="cover"
               />
             ) : (
-              <Icon icon="solar:user-bold" size={28} color="#7B8579" />
+              <Text style={styles.avatarInitial}>
+                {(profile?.display_name ?? user?.email ?? "C")[0].toUpperCase()}
+              </Text>
             )}
           </Pressable>
         </View>
@@ -470,18 +472,23 @@ const styles = StyleSheet.create({
     color: "#2C332A",
   },
   avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: "#FFFFFF",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     overflow: "hidden",
-    backgroundColor: "#E8E6E1",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: "#059669",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  avatarInitial: {
+    fontFamily: "NunitoSans_800ExtraBold",
+    fontSize: 18,
+    color: "#FFFFFF",
   },
   filterPill: {
     flexDirection: "row",
