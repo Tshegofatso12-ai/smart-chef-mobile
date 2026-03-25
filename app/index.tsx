@@ -33,7 +33,6 @@ try {
 }
 
 import { Icon } from "@/components/Icon";
-import { RecipeRow } from "@/components/RecipeRow";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useAppContext } from "@/context/AppContext";
 import { useAuthContext } from "@/context/AuthContext";
@@ -41,28 +40,28 @@ import {
   extractIngredientsFromText,
   extractIngredientsFromImage,
 } from "@/lib/api";
-import type { DietFilter, Ingredient, Recipe } from "@/types";
+import type { DietFilter } from "@/types";
 
-const COLORS = {
-  background: "#F9F6F0",
-  foreground: "#2C332A",
-  primary: "#059669",
+const C = {
+  background:        "#F9F6F0",
+  foreground:        "#2C332A",
+  primary:           "#059669",
   primaryForeground: "#FFFFFF",
-  card: "#FFFFFF",
-  muted: "#E8E6E1",
-  mutedForeground: "#7B8579",
-  border: "#E2DFD8",
-  input: "#F0EFEA",
-  chart2: "#C97A7E",
-  chart3: "#DDA77B",
+  card:              "#FFFFFF",
+  muted:             "#E8E6E1",
+  mutedForeground:   "#7B8579",
+  border:            "#E2DFD8",
+  input:             "#F0EFEA",
+  chart2:            "#C97A7E",
+  chart3:            "#DDA77B",
 };
 
 type FilterDef = { id: DietFilter; label: string; icon: string; activeColor: string };
 
 const DIET_FILTERS: FilterDef[] = [
-  { id: "low-fat", label: "Low-Fat", icon: "solar:leaf-bold", activeColor: COLORS.primary },
-  { id: "low-carb", label: "Low-Carb", icon: "solar:bone-bold", activeColor: COLORS.chart3 },
-  { id: "high-protein", label: "High-Protein", icon: "solar:fire-bold", activeColor: COLORS.chart2 },
+  { id: "low-fat",      label: "Low-Fat",      icon: "solar:leaf-bold",  activeColor: C.primary },
+  { id: "low-carb",     label: "Low-Carb",     icon: "solar:bone-bold",  activeColor: C.chart3  },
+  { id: "high-protein", label: "High-Protein", icon: "solar:fire-bold",  activeColor: C.chart2  },
 ];
 
 function getGreeting(): string {
@@ -78,8 +77,6 @@ export default function HomeScreen() {
     setActiveDietFilter,
     setTrayIngredients,
     setScannedImageUri,
-    savedRecipeIds,
-    sessions,
   } = useAppContext();
   const { profile, user } = useAuthContext();
   const insets = useSafeAreaInsets();
@@ -90,40 +87,23 @@ export default function HomeScreen() {
     transform: [{ scale: scanScale.value }],
   }));
 
+  const [searchMode, setSearchMode] = useState<"ingredients" | "recipes">("ingredients");
   const [ingredientInput, setIngredientInput] = useState("");
   const [inputFocused, setInputFocused] = useState(false);
   const [isTextLoading, setIsTextLoading] = useState(false);
   const [isScanLoading, setIsScanLoading] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isVoiceLoading, setIsVoiceLoading] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState("");
   const transcriptRef = useRef("");
-
-  // ─── Recent scans: ingredients from the last session that has images ────────
-  const recentIngredients: Ingredient[] = sessions.length > 0
-    ? sessions[0].ingredients.filter((ing) => ing.image).slice(0, 5)
-    : [];
-
-  // ─── Saved recipes (last 4, shown below scans if available) ─────────────────
-  const savedEntries = savedRecipeIds
-    .slice(0, 4)
-    .map((entry) => {
-      const session = sessions.find((s) => s.id === entry.sessionId);
-      const recipe = session?.recipes.find((r) => r.id === entry.recipeId);
-      return recipe && session ? { recipe, session } : null;
-    })
-    .filter((x): x is { recipe: Recipe; session: any } => x !== null);
 
   // ─── Speech recognition events ────────────────────────────────────────────
   useSpeechRecognitionEvent("result", (event) => {
     const t = event.results[0]?.transcript ?? "";
     transcriptRef.current = t;
-    setLiveTranscript(t);
   });
 
   useSpeechRecognitionEvent("end", async () => {
     setIsListening(false);
-    setLiveTranscript("");
     const transcript = transcriptRef.current;
     transcriptRef.current = "";
     if (!transcript) return;
@@ -142,7 +122,6 @@ export default function HomeScreen() {
 
   useSpeechRecognitionEvent("error", () => {
     setIsListening(false);
-    setLiveTranscript("");
     Alert.alert("Voice Error", "Speech recognition failed. Please try again.");
   });
 
@@ -166,7 +145,7 @@ export default function HomeScreen() {
 
   const handleMagicScan = () => {
     Alert.alert("Magic Scan", "Choose a source", [
-      { text: "Camera", onPress: () => pickImage("camera") },
+      { text: "Camera",        onPress: () => pickImage("camera")  },
       { text: "Photo Library", onPress: () => pickImage("library") },
       { text: "Cancel", style: "cancel" },
     ]);
@@ -221,18 +200,18 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.background }}>
+    <View style={{ flex: 1, backgroundColor: C.background }}>
       <SafeAreaView style={{ flex: 1 }} edges={["top"]}>
 
         {/* ── Header ── */}
-        <View style={styles.header}>
+        <View style={s.header}>
           <View>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.name}>
+            <Text style={s.greeting}>{getGreeting()}</Text>
+            <Text style={s.name}>
               {profile?.display_name ?? user?.email?.split("@")[0] ?? "Chef"} 👨‍🍳
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.push("/profile")} style={styles.avatarContainer} activeOpacity={0.75}>
+          <TouchableOpacity onPress={() => router.push("/profile")} style={s.avatarContainer} activeOpacity={0.75}>
             {profile?.avatar_url ? (
               <Image
                 source={{ uri: profile.avatar_url }}
@@ -244,9 +223,9 @@ export default function HomeScreen() {
                 colors={["#34D399", "#059669"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={styles.avatarGradient}
+                style={s.avatarGradient}
               >
-                <Text style={styles.avatarInitial}>
+                <Text style={s.avatarInitial}>
                   {(profile?.display_name ?? user?.email ?? "C")[0].toUpperCase()}
                 </Text>
               </LinearGradient>
@@ -271,15 +250,15 @@ export default function HomeScreen() {
                   setActiveDietFilter(isActive ? null : filter.id);
                 }}
                 style={[
-                  styles.filterPill,
+                  s.filterPill,
                   isActive
-                    ? [styles.filterPillActive, { backgroundColor: filter.activeColor, shadowColor: filter.activeColor }]
-                    : styles.filterPillInactive,
+                    ? [s.filterPillActive, { backgroundColor: filter.activeColor, shadowColor: filter.activeColor }]
+                    : s.filterPillInactive,
                 ]}
                 activeOpacity={0.85}
               >
-                <Icon icon={filter.icon} size={16} color={isActive ? COLORS.primaryForeground : COLORS.mutedForeground} />
-                <Text style={[styles.filterLabel, { color: isActive ? COLORS.primaryForeground : COLORS.foreground }]}>
+                <Icon icon={filter.icon} size={16} color={isActive ? C.primaryForeground : C.mutedForeground} />
+                <Text style={[s.filterLabel, { color: isActive ? C.primaryForeground : C.foreground }]}>
                   {filter.label}
                 </Text>
                 {isActive && (
@@ -290,11 +269,34 @@ export default function HomeScreen() {
           })}
         </ScrollView>
 
-        {/* ── Text Input ── */}
-        <View style={{ paddingHorizontal: 24, marginBottom: 16 }}>
-          <View style={styles.inputWrapper}>
-            <View style={styles.inputIcon}>
-              <Icon icon="solar:pen-new-square-bold-duotone" size={20} color={COLORS.primary} />
+        {/* ── Search section ── */}
+        <View style={{ paddingHorizontal: 24, gap: 14, marginBottom: 8 }}>
+          {/* Segmented toggle */}
+          <View style={s.segmentWrap}>
+            <TouchableOpacity
+              onPress={() => setSearchMode("ingredients")}
+              style={[s.segmentBtn, searchMode === "ingredients" && s.segmentBtnActive]}
+              activeOpacity={0.85}
+            >
+              <Text style={[s.segmentLabel, searchMode === "ingredients" && s.segmentLabelActive]}>
+                Ingredients
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setSearchMode("recipes")}
+              style={[s.segmentBtn, searchMode === "recipes" && s.segmentBtnActive]}
+              activeOpacity={0.85}
+            >
+              <Text style={[s.segmentLabel, searchMode === "recipes" && s.segmentLabelActive]}>
+                Recipes
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Search input */}
+          <View style={s.inputWrapper}>
+            <View style={s.inputIconLeft}>
+              <Icon icon="solar:magnifer-linear" size={20} color={C.primary} />
             </View>
             <TextInput
               value={ingredientInput}
@@ -302,197 +304,118 @@ export default function HomeScreen() {
               onFocus={() => setInputFocused(true)}
               onBlur={() => setInputFocused(false)}
               onSubmitEditing={handleTextSubmit}
-              placeholder="Type ingredients (e.g. eggs, kale...)"
-              placeholderTextColor={COLORS.mutedForeground}
-              returnKeyType="send"
-              style={[styles.input, inputFocused && styles.inputFocused, { fontFamily: "NunitoSans_600SemiBold", paddingRight: 56 }]}
+              placeholder={
+                searchMode === "ingredients"
+                  ? "Search for recipes or ingredients..."
+                  : "Search for recipes..."
+              }
+              placeholderTextColor={C.mutedForeground}
+              returnKeyType="search"
+              style={[s.input, inputFocused && s.inputFocused, { fontFamily: "NunitoSans_600SemiBold" }]}
             />
             <TouchableOpacity
-              onPress={handleTextSubmit}
-              style={[styles.sendButton, { opacity: ingredientInput.trim() ? 1 : 0.4 }]}
-              disabled={!ingredientInput.trim() || isTextLoading}
+              style={s.filterBtn}
               activeOpacity={0.85}
+              onPress={searchMode === "ingredients" && ingredientInput.trim() ? handleTextSubmit : undefined}
             >
               {isTextLoading
-                ? <ActivityIndicator size="small" color={COLORS.primaryForeground} />
-                : <Icon icon="solar:send-bold" size={16} color={COLORS.primaryForeground} />
+                ? <ActivityIndicator size="small" color={C.primary} />
+                : <Icon icon="solar:filter-bold-duotone" size={20} color={C.primary} />
               }
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* ── Scrollable content ── */}
-        <ScrollView
-          style={{ flex: 1 }}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
-        >
-          {/* Magic Scan Button — 3D squishy */}
-          <View style={{ alignItems: "center", paddingVertical: 8 }}>
-            <Animated.View style={scanAnimStyle}>
-              <TouchableOpacity
-                onPress={handleMagicScan}
-                onPressIn={() => {
-                  scanScale.value = withSpring(0.92, { damping: 14, stiffness: 450 });
-                }}
-                onPressOut={() => {
-                  scanScale.value = withSpring(1, { damping: 11, stiffness: 280 });
-                }}
-                activeOpacity={1}
-              >
-                <View style={styles.scanShadowWrap}>
-                  <LinearGradient
-                    colors={["#6EE7B7", "#059669", "#047857"]}
-                    start={{ x: 0.15, y: 0 }}
-                    end={{ x: 0.85, y: 1 }}
-                    style={styles.scanButton}
-                  >
-                    <LinearGradient
-                      colors={["rgba(255,255,255,0.38)", "rgba(255,255,255,0.10)", "transparent"]}
-                      start={{ x: 0.5, y: 0 }}
-                      end={{ x: 0.5, y: 1 }}
-                      style={styles.scanGloss}
-                    />
-                    <LinearGradient
-                      colors={["transparent", "rgba(0,0,0,0.18)"]}
-                      start={{ x: 0.5, y: 0.6 }}
-                      end={{ x: 0.5, y: 1 }}
-                      style={styles.scanRim}
-                    />
-                    <View style={styles.scanIconCircle}>
-                      <Icon icon="solar:scanner-2-bold-duotone" size={44} color={COLORS.primaryForeground} />
-                    </View>
-                    <View style={{ alignItems: "center" }}>
-                      <Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: COLORS.primaryForeground, letterSpacing: -0.5 }}>
-                        Magic Scan
-                      </Text>
-                      <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
-                        Tap to scan ingredients
-                      </Text>
-                    </View>
-                  </LinearGradient>
-                </View>
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-
-          {/* ── Voice Input ── */}
-          <View style={styles.section}>
-            <View style={styles.voiceCard}>
-              <TouchableOpacity
-                onPress={handleVoice}
-                style={[styles.voiceMicButton, isListening && styles.voiceMicButtonActive]}
-                activeOpacity={0.85}
-              >
-                {isVoiceLoading ? (
-                  <ActivityIndicator size="large" color={COLORS.primaryForeground} />
-                ) : (
-                  <Icon
-                    icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
-                    size={32}
-                    color={isListening ? COLORS.primaryForeground : COLORS.foreground}
-                  />
-                )}
-              </TouchableOpacity>
-
-              <View style={{ flex: 1 }}>
-                <Text style={styles.voiceTitle}>
-                  {isListening ? "Listening…" : isVoiceLoading ? "Processing…" : "Voice Input"}
-                </Text>
-                {isListening && liveTranscript ? (
-                  <Text style={styles.voiceTranscript} numberOfLines={2}>{liveTranscript}</Text>
-                ) : (
-                  <Text style={styles.voiceSubtitle}>
-                    {isListening ? "Speak your ingredients" : "Tap mic and say your ingredients"}
-                  </Text>
-                )}
-              </View>
-
-              {isListening && (
-                <TouchableOpacity
-                  onPress={handleVoice}
-                  style={styles.voiceStopButton}
-                  activeOpacity={0.8}
+        {/* ── Main centred area ── */}
+        <View style={s.main}>
+          {/* Magic Scan 3D button */}
+          <Animated.View style={scanAnimStyle}>
+            <TouchableOpacity
+              onPress={handleMagicScan}
+              onPressIn={() => { scanScale.value = withSpring(0.92, { damping: 14, stiffness: 450 }); }}
+              onPressOut={() => { scanScale.value = withSpring(1,    { damping: 11, stiffness: 280 }); }}
+              activeOpacity={1}
+            >
+              <View style={s.scanShadowWrap}>
+                <LinearGradient
+                  colors={["#6EE7B7", "#059669", "#047857"]}
+                  start={{ x: 0.15, y: 0 }}
+                  end={{ x: 0.85, y: 1 }}
+                  style={s.scanButton}
                 >
-                  <Text style={styles.voiceStopText}>Stop</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* ── Recent Scans carousel ── */}
-          {recentIngredients.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent Scans</Text>
-                <TouchableOpacity onPress={() => router.push({ pathname: "/saved", params: { tab: "history" } })} activeOpacity={0.7}>
-                  <Text style={styles.sectionLink}>View All</Text>
-                </TouchableOpacity>
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.scanCarouselContent}
-              >
-                {recentIngredients.map((ing) => (
-                  <View key={ing.id} style={styles.scanCard}>
-                    {/* Ingredient photo */}
-                    <View style={styles.scanCardImageWrap}>
-                      <Image
-                        source={{ uri: ing.image }}
-                        style={StyleSheet.absoluteFill}
-                        resizeMode="cover"
-                      />
-                      {/* Check badge */}
-                      <View style={styles.scanCardCheck}>
-                        <Icon icon="solar:check-circle-bold" size={14} color={COLORS.primary} />
-                      </View>
-                    </View>
-                    <Text style={styles.scanCardName} numberOfLines={1}>{ing.name}</Text>
-                    <Text style={styles.scanCardSub} numberOfLines={1}>{ing.subtitle}</Text>
+                  <LinearGradient
+                    colors={["rgba(255,255,255,0.38)", "rgba(255,255,255,0.10)", "transparent"]}
+                    start={{ x: 0.5, y: 0 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={s.scanGloss}
+                  />
+                  <LinearGradient
+                    colors={["transparent", "rgba(0,0,0,0.18)"]}
+                    start={{ x: 0.5, y: 0.6 }}
+                    end={{ x: 0.5, y: 1 }}
+                    style={s.scanRim}
+                  />
+                  <View style={s.scanIconCircle}>
+                    <Icon icon="solar:scanner-2-bold-duotone" size={44} color={C.primaryForeground} />
                   </View>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-
-          {/* ── Saved Recipes ── */}
-          {savedEntries.length > 0 && (
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Saved Recipes</Text>
-                <TouchableOpacity onPress={() => router.push("/saved")} activeOpacity={0.7}>
-                  <Text style={styles.sectionLink}>View All</Text>
-                </TouchableOpacity>
+                  <View style={{ alignItems: "center" }}>
+                    <Text style={{ fontFamily: "NunitoSans_800ExtraBold", fontSize: 20, color: C.primaryForeground, letterSpacing: -0.5 }}>
+                      Magic Scan
+                    </Text>
+                    <Text style={{ fontFamily: "NunitoSans_400Regular", fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 3 }}>
+                      Tap to scan ingredients
+                    </Text>
+                  </View>
+                </LinearGradient>
               </View>
-              <View style={{ gap: 12, paddingHorizontal: 24 }}>
-                {savedEntries.map(({ recipe, session }) => (
-                  <RecipeRow key={recipe.id} recipe={recipe} sessionId={session.id} isSaved />
-                ))}
-              </View>
-            </View>
-          )}
+            </TouchableOpacity>
+          </Animated.View>
 
-        </ScrollView>
+          {/* Voice button */}
+          <View style={s.voiceWrap}>
+            <TouchableOpacity
+              onPress={handleVoice}
+              style={[s.voiceBtn, isListening && s.voiceBtnActive]}
+              activeOpacity={0.85}
+            >
+              {isVoiceLoading ? (
+                <ActivityIndicator size="small" color={C.primary} />
+              ) : (
+                <Icon
+                  icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
+                  size={24}
+                  color={isListening ? C.primaryForeground : C.primary}
+                />
+              )}
+              <Text style={[s.voiceBtnText, isListening && { color: C.primaryForeground }]}>
+                {isListening ? "Listening…" : isVoiceLoading ? "Processing…" : "Speak Your Ingredients"}
+              </Text>
+            </TouchableOpacity>
+            <Text style={s.voiceTagline}>
+              Don't feel like scanning? Just tell SmartChef what you have.
+            </Text>
+          </View>
+        </View>
+
       </SafeAreaView>
 
       {/* ── Bottom nav ── */}
-      <View style={[styles.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-          <Icon icon="solar:home-2-bold-duotone" size={24} color={COLORS.primary} />
-          <Text style={[styles.navLabel, { color: COLORS.primary }]}>Home</Text>
+      <View style={[s.bottomNav, { paddingBottom: insets.bottom + 8 }]}>
+        <TouchableOpacity style={s.navItem} activeOpacity={0.7}>
+          <Icon icon="solar:home-2-bold-duotone" size={24} color={C.primary} />
+          <Text style={[s.navLabel, { color: C.primary }]}>Home</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} activeOpacity={0.7}>
-          <Icon icon="solar:magnifer-bold-duotone" size={24} color={COLORS.mutedForeground} />
-          <Text style={[styles.navLabel, { color: COLORS.mutedForeground }]}>Explore</Text>
+        <TouchableOpacity style={s.navItem} activeOpacity={0.7}>
+          <Icon icon="solar:magnifer-bold-duotone" size={24} color={C.mutedForeground} />
+          <Text style={[s.navLabel, { color: C.mutedForeground }]}>Explore</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push("/saved")} style={styles.navItem} activeOpacity={0.7}>
-          <Icon icon="solar:chef-hat-bold-duotone" size={24} color={COLORS.mutedForeground} />
-          <Text style={[styles.navLabel, { color: COLORS.mutedForeground }]}>Recipes</Text>
+        <TouchableOpacity onPress={() => router.push("/saved")} style={s.navItem} activeOpacity={0.7}>
+          <Icon icon="solar:chef-hat-bold-duotone" size={24} color={C.mutedForeground} />
+          <Text style={[s.navLabel, { color: C.mutedForeground }]}>Recipes</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => router.push("/profile")} style={styles.navItem} activeOpacity={0.7}>
-          <Icon icon="solar:user-bold-duotone" size={24} color={COLORS.mutedForeground} />
-          <Text style={[styles.navLabel, { color: COLORS.mutedForeground }]}>Profile</Text>
+        <TouchableOpacity onPress={() => router.push("/profile")} style={s.navItem} activeOpacity={0.7}>
+          <Icon icon="solar:user-bold-duotone" size={24} color={C.mutedForeground} />
+          <Text style={[s.navLabel, { color: C.mutedForeground }]}>Profile</Text>
         </TouchableOpacity>
       </View>
 
@@ -504,7 +427,8 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
+  // ── Header ────────────────────────────────────────────────────────────────
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -547,6 +471,8 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: "#FFFFFF",
   },
+
+  // ── Diet filter pills ──────────────────────────────────────────────────────
   filterPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -575,22 +501,55 @@ const styles = StyleSheet.create({
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 13,
   },
+
+  // ── Segmented toggle ──────────────────────────────────────────────────────
+  segmentWrap: {
+    flexDirection: "row",
+    alignSelf: "center",
+    backgroundColor: "#E8E6E1",
+    borderRadius: 16,
+    padding: 6,
+    gap: 4,
+  },
+  segmentBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  segmentBtnActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  segmentLabel: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 14,
+    color: "#7B8579",
+  },
+  segmentLabelActive: {
+    color: "#2C332A",
+  },
+
+  // ── Search input ──────────────────────────────────────────────────────────
   inputWrapper: {
     position: "relative",
     flexDirection: "row",
     alignItems: "center",
   },
-  inputIcon: {
+  inputIconLeft: {
     position: "absolute",
-    left: 16,
+    left: 20,
     zIndex: 1,
   },
   input: {
     flex: 1,
-    height: 52,
-    paddingLeft: 48,
-    paddingRight: 16,
-    borderRadius: 999,
+    height: 60,
+    paddingLeft: 52,
+    paddingRight: 60,
+    borderRadius: 32,
     backgroundColor: "#F0EFEA",
     borderWidth: 2,
     borderColor: "transparent",
@@ -598,19 +557,35 @@ const styles = StyleSheet.create({
     color: "#2C332A",
   },
   inputFocused: {
-    borderColor: "rgba(138,154,134,0.3)",
+    borderColor: "rgba(5,150,105,0.3)",
     backgroundColor: "#FFFFFF",
   },
-  sendButton: {
+  filterBtn: {
     position: "absolute",
-    right: 6,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#059669",
+    right: 8,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
+
+  // ── Main centred area ──────────────────────────────────────────────────────
+  main: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingBottom: 24,
+    gap: 28,
+  },
+
+  // ── Scan button ───────────────────────────────────────────────────────────
   scanShadowWrap: {
     shadowColor: "#5A7056",
     shadowOffset: { width: 0, height: 14 },
@@ -649,140 +624,52 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  section: {
-    marginTop: 20,
-  },
-  sectionHeader: {
-    flexDirection: "row",
+
+  // ── Voice button ──────────────────────────────────────────────────────────
+  voiceWrap: {
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 24,
-    marginBottom: 12,
+    width: 280,
+    gap: 12,
   },
-  sectionTitle: {
-    fontFamily: "NunitoSans_700Bold",
-    fontSize: 16,
-    color: "#2C332A",
-  },
-  sectionLink: {
-    fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 13,
-    color: "#059669",
-  },
-  voiceCard: {
-    marginHorizontal: 24,
-    backgroundColor: "#FFFFFF",
+  voiceBtn: {
+    width: "100%",
+    height: 56,
     borderRadius: 24,
+    backgroundColor: "#FFFFFF",
     borderWidth: 1,
     borderColor: "rgba(226,223,216,0.5)",
-    padding: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    justifyContent: "center",
+    gap: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
-  voiceMicButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: "#F0EFEA",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(226,223,216,0.6)",
-    flexShrink: 0,
-  },
-  voiceMicButtonActive: {
+  voiceBtnActive: {
     backgroundColor: "#059669",
     borderColor: "#059669",
     shadowColor: "#059669",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 6,
   },
-  voiceTitle: {
+  voiceBtnText: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 14,
+    fontSize: 15,
     color: "#2C332A",
-    marginBottom: 3,
   },
-  voiceSubtitle: {
-    fontFamily: "NunitoSans_400Regular",
-    fontSize: 12,
-    color: "#7B8579",
-  },
-  voiceTranscript: {
-    fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 12,
-    color: "#059669",
-    fontStyle: "italic",
-  },
-  voiceStopButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: "rgba(201,122,126,0.1)",
-  },
-  voiceStopText: {
+  voiceTagline: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 12,
-    color: "#C97A7E",
-  },
-
-  // ── Recent Scans carousel ──────────────────────────────────────────────────
-  scanCarouselContent: {
-    paddingHorizontal: 24,
-    gap: 12,
-    paddingBottom: 4,
-  },
-  scanCard: {
-    width: 136,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: "rgba(226,223,216,0.5)",
-    flexShrink: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  scanCardImageWrap: {
-    height: 108,
-    borderRadius: 16,
-    overflow: "hidden",
-    backgroundColor: "#E8E6E1",
-    marginBottom: 10,
-    position: "relative",
-  },
-  scanCardCheck: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.85)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  scanCardName: {
-    fontFamily: "NunitoSans_700Bold",
-    fontSize: 13,
-    color: "#2C332A",
-    marginBottom: 2,
-  },
-  scanCardSub: {
-    fontFamily: "NunitoSans_400Regular",
-    fontSize: 11,
+    fontSize: 10,
     color: "#7B8579",
+    textTransform: "uppercase",
+    letterSpacing: 1.5,
+    textAlign: "center",
+    lineHeight: 16,
+    paddingHorizontal: 16,
   },
 
   // ── Bottom nav ────────────────────────────────────────────────────────────
