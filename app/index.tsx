@@ -35,14 +35,13 @@ try {
 import { Icon } from "@/components/Icon";
 import { RecipeRow } from "@/components/RecipeRow";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
-import { ProfileDrawer } from "@/components/ProfileDrawer";
 import { useAppContext } from "@/context/AppContext";
 import { useAuthContext } from "@/context/AuthContext";
 import {
   extractIngredientsFromText,
   extractIngredientsFromImage,
 } from "@/lib/api";
-import type { DietFilter, Recipe } from "@/types";
+import type { DietFilter, Ingredient, Recipe } from "@/types";
 
 const COLORS = {
   background: "#F9F6F0",
@@ -83,7 +82,6 @@ export default function HomeScreen() {
     sessions,
   } = useAppContext();
   const { profile, user } = useAuthContext();
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // ─── Magic Scan spring animation ─────────────────────────────────────────
   const scanScale = useSharedValue(1);
@@ -100,7 +98,12 @@ export default function HomeScreen() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const transcriptRef = useRef("");
 
-  // ─── Saved recipes (last 4) ────────────────────────────────────────────────
+  // ─── Recent scans: ingredients from the last session that has images ────────
+  const recentIngredients: Ingredient[] = sessions.length > 0
+    ? sessions[0].ingredients.filter((ing) => ing.image).slice(0, 5)
+    : [];
+
+  // ─── Saved recipes (last 4, shown below scans if available) ─────────────────
   const savedEntries = savedRecipeIds
     .slice(0, 4)
     .map((entry) => {
@@ -229,7 +232,7 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Pressable
-            onPress={() => setDrawerOpen(true)}
+            onPress={() => router.push("/profile")}
             style={({ pressed }) => [styles.avatarContainer, { opacity: pressed ? 0.75 : 1 }]}
           >
             {profile?.avatar_url ? (
@@ -418,6 +421,42 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* ── Recent Scans carousel ── */}
+          {recentIngredients.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Scans</Text>
+                <Pressable onPress={() => router.push({ pathname: "/saved", params: { tab: "history" } })}>
+                  <Text style={styles.sectionLink}>View All</Text>
+                </Pressable>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.scanCarouselContent}
+              >
+                {recentIngredients.map((ing) => (
+                  <View key={ing.id} style={styles.scanCard}>
+                    {/* Ingredient photo */}
+                    <View style={styles.scanCardImageWrap}>
+                      <Image
+                        source={{ uri: ing.image }}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="cover"
+                      />
+                      {/* Check badge */}
+                      <View style={styles.scanCardCheck}>
+                        <Icon icon="solar:check-circle-bold" size={14} color={COLORS.primary} />
+                      </View>
+                    </View>
+                    <Text style={styles.scanCardName} numberOfLines={1}>{ing.name}</Text>
+                    <Text style={styles.scanCardSub} numberOfLines={1}>{ing.subtitle}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {/* ── Saved Recipes ── */}
           {savedEntries.length > 0 && (
             <View style={styles.section}>
@@ -445,8 +484,6 @@ export default function HomeScreen() {
         visible={isScanLoading || isVoiceLoading}
         message={isScanLoading ? "Scanning ingredients..." : "Processing voice..."}
       />
-
-      <ProfileDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </View>
   );
 }
@@ -699,5 +736,56 @@ const styles = StyleSheet.create({
     fontFamily: "NunitoSans_700Bold",
     fontSize: 12,
     color: "#C97A7E",
+  },
+
+  // ── Recent Scans carousel ──────────────────────────────────────────────────
+  scanCarouselContent: {
+    paddingHorizontal: 24,
+    gap: 12,
+    paddingBottom: 4,
+  },
+  scanCard: {
+    width: 136,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(226,223,216,0.5)",
+    flexShrink: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  scanCardImageWrap: {
+    height: 108,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#E8E6E1",
+    marginBottom: 10,
+    position: "relative",
+  },
+  scanCardCheck: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanCardName: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 13,
+    color: "#2C332A",
+    marginBottom: 2,
+  },
+  scanCardSub: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 11,
+    color: "#7B8579",
   },
 });
