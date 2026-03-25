@@ -36,10 +36,11 @@ import { Icon } from "@/components/Icon";
 import { RecipeRow } from "@/components/RecipeRow";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useAppContext } from "@/context/AppContext";
+import { useAuthContext } from "@/context/AuthContext";
 import {
   extractIngredientsFromText,
   extractIngredientsFromImage,
-} from "@/lib/claude";
+} from "@/lib/api";
 import type { DietFilter, Recipe } from "@/types";
 
 const COLORS = {
@@ -80,6 +81,7 @@ export default function HomeScreen() {
     savedRecipeIds,
     sessions,
   } = useAppContext();
+  const { profile, user } = useAuthContext();
 
   // ─── Magic Scan spring animation ─────────────────────────────────────────
   const scanScale = useSharedValue(1);
@@ -220,14 +222,20 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.name}>Tshegofatso 👨‍🍳</Text>
+            <Text style={styles.name}>
+              {profile?.display_name ?? user?.email?.split("@")[0] ?? "Chef"} 👨‍🍳
+            </Text>
           </View>
           <View style={styles.avatarContainer}>
-            <Image
-              source={{ uri: "https://lh3.googleusercontent.com/a/ACg8ocKqtIkGkSMwNo8noobbQHviRPKyY_ZVEQMrnjVJvhb__3E2Udw_=s96-c" }}
-              style={{ width: "100%", height: "100%" }}
-              resizeMode="cover"
-            />
+            {profile?.avatar_url ? (
+              <Image
+                source={{ uri: profile.avatar_url }}
+                style={{ width: "100%", height: "100%" }}
+                resizeMode="cover"
+              />
+            ) : (
+              <Icon icon="solar:user-bold" size={28} color="#7B8579" />
+            )}
           </View>
         </View>
 

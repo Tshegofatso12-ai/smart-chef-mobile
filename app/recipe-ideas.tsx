@@ -36,8 +36,7 @@ function RecipeIdeaCard({
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { isRecipeSaved, toggleSaved } = useAppContext();
-
-  const unsplashUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(recipe.title)},food`;
+  const imageUrl = recipe.imageUrl ?? null;
 
   return (
     <Pressable
@@ -62,10 +61,10 @@ function RecipeIdeaCard({
           style={StyleSheet.absoluteFillObject}
         />
 
-        {/* Unsplash image fades in on load */}
-        {!imageError && (
+        {/* Pexels image fades in on load */}
+        {!imageError && imageUrl && (
           <Image
-            source={{ uri: unsplashUrl }}
+            source={{ uri: imageUrl }}
             style={[StyleSheet.absoluteFillObject, { opacity: imageLoaded ? 1 : 0 }]}
             resizeMode="cover"
             onLoad={() => setImageLoaded(true)}
@@ -97,6 +96,10 @@ function RecipeIdeaCard({
           <Icon icon="solar:chef-hat-bold" size={28} color="rgba(255,255,255,0.9)" />
         </View>
       </View>
+
+      {imageUrl && (
+        <Text style={styles.photoDisclaimer}>Photo is illustrative — not the actual dish</Text>
+      )}
 
       {/* ── Card body ── */}
       <View style={styles.cardBody}>
@@ -369,6 +372,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     paddingTop: 4,
+  },
+  photoDisclaimer: {
+    fontSize: 11,
+    color: "#7B8579",
+    fontStyle: "italic",
+    paddingTop: 6,
   },
   viewText: {
     fontFamily: "NunitoSans_700Bold",

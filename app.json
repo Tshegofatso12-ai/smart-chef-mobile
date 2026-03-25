@@ -25,7 +25,8 @@
       "expo-router",
       "expo-font",
       "expo-image-picker",
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true

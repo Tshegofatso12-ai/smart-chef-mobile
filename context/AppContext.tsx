@@ -11,59 +11,120 @@ import type {
   Ingredient,
   DietFilter,
   SavedRecipeEntry,
+  Recipe,
 } from "@/types";
-import {
-  loadSessions,
-  saveSessions,
-  loadSavedEntries,
-  saveSavedEntries,
-} from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
+import { useAuthContext } from "@/context/AuthContext";
 
 const AppContext = createContext<AppContextValue | null>(null);
 
+function mapDbRecipe(row: any): Recipe {
+  return {
+    id: row.id,
+    title: row.title,
+    cookTime: row.cook_time,
+    calories: row.calories,
+    dietMatch: row.diet_match,
+    gradientColors: row.gradient_colors as [string, string],
+    badges: row.badges,
+    stats: row.stats,
+    ingredients: row.ingredients,
+    steps: row.steps,
+    imageUrl: row.image_url ?? null,
+  };
+}
+
+function mapDbSession(row: any): RecipeSession {
+  return {
+    id: row.id,
+    createdAt: new Date(row.created_at).getTime(),
+    ingredients: row.ingredients as Ingredient[],
+    dietFilter: row.diet_filter as DietFilter | null,
+    recipes: (row.recipes ?? []).map(mapDbRecipe),
+  };
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [activeSession, setActiveSession] = useState<RecipeSession | null>(
-    null
-  );
+  const { session } = useAuthContext();
+  const [activeSession, setActiveSession] = useState<RecipeSession | null>(null);
   const [sessions, setSessions] = useState<RecipeSession[]>([]);
   const [savedRecipeIds, setSavedRecipeIds] = useState<SavedRecipeEntry[]>([]);
   const [trayIngredients, setTrayIngredients] = useState<Ingredient[]>([]);
   const [scannedImageUri, setScannedImageUri] = useState<string | null>(null);
-  const [activeDietFilter, setActiveDietFilter] =
-    useState<DietFilter | null>(null);
+  const [activeDietFilter, setActiveDietFilter] = useState<DietFilter | null>(null);
 
-  // Hydrate from AsyncStorage on mount
+  // Hydrate from Supabase when user logs in
   useEffect(() => {
-    Promise.all([loadSessions(), loadSavedEntries()]).then(
-      ([storedSessions, storedSaved]) => {
-        setSessions(storedSessions);
-        setSavedRecipeIds(storedSaved);
-      }
-    );
-  }, []);
+    if (!session?.user) {
+      setSessions([]);
+      setSavedRecipeIds([]);
+      setActiveSession(null);
+      return;
+    }
 
-  const addSession = useCallback(async (session: RecipeSession) => {
-    setSessions((prev) => {
-      const updated = [session, ...prev];
-      saveSessions(updated).catch(() => {});
-      return updated;
+    const userId = session.user.id;
+
+    Promise.all([
+      supabase
+        .from("sessions")
+        .select("*, recipes(*)")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("saved_recipes")
+        .select("recipe_id, session_id:recipes(session_id), saved_at")
+        .eq("user_id", userId)
+        .order("saved_at", { ascending: false }),
+    ]).then(([{ data: sessionRows }, { data: savedRows }]) => {
+      if (sessionRows) setSessions(sessionRows.map(mapDbSession));
+      if (savedRows) {
+        setSavedRecipeIds(
+          savedRows.map((row: any) => ({
+            recipeId: row.recipe_id,
+            sessionId: row.session_id?.session_id ?? "",
+            savedAt: new Date(row.saved_at).getTime(),
+          }))
+        );
+      }
     });
-    setActiveSession(session);
-  }, []);
+  }, [session?.user?.id]);
+
+  // addSession: edge function already persisted to DB, just update local state
+  const addSession = useCallback(
+    async (session: RecipeSession) => {
+      setSessions((prev) => [session, ...prev]);
+      setActiveSession(session);
+    },
+    []
+  );
 
   const toggleSaved = useCallback(
     async (recipeId: string, sessionId: string) => {
-      setSavedRecipeIds((prev) => {
-        const exists = prev.findIndex((e) => e.recipeId === recipeId);
-        const updated =
-          exists >= 0
-            ? prev.filter((e) => e.recipeId !== recipeId)
-            : [{ recipeId, sessionId, savedAt: Date.now() }, ...prev];
-        saveSavedEntries(updated).catch(() => {});
-        return updated;
-      });
+      if (!session?.user) return;
+      const exists = savedRecipeIds.some((e) => e.recipeId === recipeId);
+
+      if (exists) {
+        await supabase
+          .from("saved_recipes")
+          .delete()
+          .match({ user_id: session.user.id, recipe_id: recipeId });
+        setSavedRecipeIds((prev) => prev.filter((e) => e.recipeId !== recipeId));
+      } else {
+        const { data } = await supabase
+          .from("saved_recipes")
+          .insert({ user_id: session.user.id, recipe_id: recipeId })
+          .select()
+          .single();
+        if (data) {
+          setSavedRecipeIds((prev) => [
+            { recipeId, sessionId, savedAt: new Date(data.saved_at).getTime() },
+            ...prev,
+          ]);
+        }
+      }
     },
-    []
+    [session?.user, savedRecipeIds]
   );
 
   const isRecipeSaved = useCallback(

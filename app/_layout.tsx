@@ -1,8 +1,9 @@
 import "../global.css";
 import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AppProvider } from "@/context/AppContext";
+import { AuthProvider, useAuthContext } from "@/context/AuthContext";
 import * as SplashScreen from "expo-splash-screen";
 import {
   useFonts,
@@ -17,6 +18,31 @@ import {
 } from "@expo-google-fonts/playfair-display";
 
 SplashScreen.preventAutoHideAsync();
+
+function RootNavigator() {
+  const { session, profile, isLoading } = useAuthContext();
+
+  useEffect(() => {
+    if (isLoading) return;
+
+    if (!session) {
+      router.replace("/onboarding/welcome");
+    } else if (profile && !profile.onboarding_complete) {
+      router.replace("/onboarding/preferences");
+    }
+  }, [isLoading, session, profile]);
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="ingredient-tray" />
+      <Stack.Screen name="recipe-ideas" />
+      <Stack.Screen name="recipe/[id]" />
+      <Stack.Screen name="saved" />
+      <Stack.Screen name="onboarding" />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -39,15 +65,11 @@ export default function RootLayout() {
   }
 
   return (
-    <AppProvider>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="ingredient-tray" />
-        <Stack.Screen name="recipe-ideas" />
-        <Stack.Screen name="recipe/[id]" />
-        <Stack.Screen name="saved" />
-      </Stack>
-    </AppProvider>
+    <AuthProvider>
+      <AppProvider>
+        <StatusBar style="dark" />
+        <RootNavigator />
+      </AppProvider>
+    </AuthProvider>
   );
 }

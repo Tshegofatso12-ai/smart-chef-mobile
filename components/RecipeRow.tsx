@@ -17,10 +17,7 @@ export function RecipeRow({
 }) {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-
-  const unsplashUrl = `https://source.unsplash.com/featured/?${encodeURIComponent(
-    recipe.title
-  )},food`;
+  const imageUrl = recipe.imageUrl ?? null;
 
   return (
     <Pressable
@@ -44,9 +41,9 @@ export function RecipeRow({
           style={StyleSheet.absoluteFillObject}
         />
 
-        {!imageError && (
+        {!imageError && imageUrl && (
           <Image
-            source={{ uri: unsplashUrl }}
+            source={{ uri: imageUrl }}
             style={[
               StyleSheet.absoluteFillObject,
               { opacity: imageLoaded ? 1 : 0 },

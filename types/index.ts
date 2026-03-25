@@ -33,6 +33,7 @@ export type Recipe = {
   ingredients: string[];
   steps: string[];
   gradientColors: [string, string];
+  imageUrl: string | null;
 };
 
 export type RecipeSession = {
@@ -47,6 +48,20 @@ export type SavedRecipeEntry = {
   recipeId: string;
   sessionId: string;
   savedAt: number;
+};
+
+export type CookingSkill = "beginner" | "intermediate" | "advanced";
+
+export type Profile = {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  dietary_preferences: DietFilter[];
+  allergies: string[];
+  cooking_skill: CookingSkill;
+  onboarding_complete: boolean;
+  created_at: string;
+  updated_at: string;
 };
 
 export type AppContextValue = {
