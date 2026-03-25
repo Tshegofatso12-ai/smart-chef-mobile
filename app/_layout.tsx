@@ -45,6 +45,7 @@ function RootNavigator() {
       <Stack.Screen name="recipe-ideas" />
       <Stack.Screen name="recipe/[id]" />
       <Stack.Screen name="saved" />
+      <Stack.Screen name="profile" />
       <Stack.Screen name="onboarding" />
     </Stack>
   );
