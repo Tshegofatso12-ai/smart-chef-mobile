@@ -1,5 +1,6 @@
 import "../global.css";
 import { useEffect } from "react";
+import { View } from "react-native";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AppProvider } from "@/context/AppContext";
@@ -31,6 +32,11 @@ function RootNavigator() {
       router.replace("/onboarding/preferences");
     }
   }, [isLoading, session, profile]);
+
+  // Hold render until auth state is known to prevent flash + cascade errors
+  if (isLoading) {
+    return <View style={{ flex: 1, backgroundColor: "#F9F6F0" }} />;
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
