@@ -14,7 +14,13 @@ Deno.serve(async (req) => {
     await requireUser(req);
 
     const { mode, text, base64Image, mimeType } = await req.json();
-    const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY")!;
+    const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!anthropicApiKey) {
+      return new Response(
+        JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured on this server." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     let messages: unknown[];
 
@@ -73,6 +79,15 @@ Example output:
       }),
     });
 
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      const detail = (errBody as any)?.error?.message ?? `Anthropic API error ${response.status}`;
+      return new Response(
+        JSON.stringify({ error: detail }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const result = await response.json();
     const raw = (result.content[0] as { text: string }).text.trim();
     const cleaned = raw.replace(/^```[a-z]*\n?/i, "").replace(/```$/i, "").trim();
@@ -83,6 +98,7 @@ Example output:
     });
   } catch (err) {
     if (err instanceof Response) return err;
+    console.error("[extract-ingredients] Unhandled error:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
