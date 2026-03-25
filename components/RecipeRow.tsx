@@ -1,9 +1,8 @@
-import React, { useState } from "react";
-import { View, Text, Image, Pressable, StyleSheet } from "react-native";
+import React from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
-import { Shimmer } from "@/components/Shimmer";
+import { useAppContext } from "@/context/AppContext";
 import type { Recipe } from "@/types";
 
 export function RecipeRow({
@@ -15,146 +14,89 @@ export function RecipeRow({
   sessionId: string;
   isSaved?: boolean;
 }) {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const imageUrl = recipe.imageUrl ?? null;
+  const { toggleSaved } = useAppContext();
 
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={() =>
-        router.push({
-          pathname: "/recipe/[id]",
-          params: { id: recipe.id, sessionId },
-        })
+        router.push({ pathname: "/recipe/[id]", params: { id: recipe.id, sessionId } })
       }
-      style={({ pressed }) => [
-        styles.recipeRow,
-        { opacity: pressed ? 0.85 : 1 },
-      ]}
+      style={s.card}
+      activeOpacity={0.9}
     >
-      {/* Image */}
-      <View style={[styles.rowSwatch, { overflow: "hidden" }]}>
-        <LinearGradient
-          colors={recipe.gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFillObject}
+      <View style={{ flex: 1, gap: 6, paddingRight: 48 }}>
+        <Text style={s.title} numberOfLines={2}>{recipe.title}</Text>
+        <View style={s.meta}>
+          <View style={s.metaItem}>
+            <Icon icon="solar:fire-bold" size={13} color="#C97A7E" />
+            <Text style={s.metaText}>{recipe.calories}</Text>
+          </View>
+          <View style={s.metaItem}>
+            <Icon icon="solar:clock-circle-bold" size={13} color="#DDA77B" />
+            <Text style={s.metaText}>{recipe.cookTime}</Text>
+          </View>
+        </View>
+      </View>
+      <TouchableOpacity
+        onPress={() => toggleSaved(recipe.id, sessionId)}
+        style={s.bookmarkBtn}
+        activeOpacity={0.8}
+      >
+        <Icon
+          icon={isSaved ? "solar:bookmark-bold" : "solar:bookmark-outline"}
+          size={20}
+          color="#059669"
         />
-
-        {!imageError && imageUrl && (
-          <Image
-            source={{ uri: imageUrl }}
-            style={[
-              StyleSheet.absoluteFillObject,
-              { opacity: imageLoaded ? 1 : 0 },
-            ]}
-            resizeMode="cover"
-            onLoad={() => setImageLoaded(true)}
-            onError={() => setImageError(true)}
-          />
-        )}
-
-        {!imageLoaded && !imageError && <Shimmer />}
-      </View>
-
-      {/* Text */}
-      <View style={styles.rowInfo}>
-        <Text style={styles.rowTitle} numberOfLines={1}>
-          {recipe.title}
-        </Text>
-
-        <View style={styles.rowMeta}>
-          {recipe.badges[0] && (
-            <View
-              style={[
-                styles.rowBadge,
-                { backgroundColor: recipe.badges[0].bg },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.rowBadgeText,
-                  { color: recipe.badges[0].color },
-                ]}
-              >
-                {recipe.badges[0].label}
-              </Text>
-            </View>
-          )}
-
-          <Text style={styles.rowStat}>{recipe.cookTime}</Text>
-          <Text style={styles.rowStat}>·</Text>
-          <Text style={styles.rowStat}>{recipe.calories}</Text>
-        </View>
-      </View>
-
-      {/* Bookmark top-right */}
-      {isSaved && (
-        <View style={styles.bookmarkBadge}>
-          <Icon icon="solar:bookmark-bold" size={28} color="#059669" />
-        </View>
-      )}
-    </Pressable>
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 }
 
-export const styles = StyleSheet.create({
-  recipeRow: {
+const s = StyleSheet.create({
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(226,223,216,0.5)",
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 22,
-    gap: 14,
-    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  rowSwatch: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    flexShrink: 0,
-  },
-  rowInfo: {
-    flex: 1,
-    gap: 6,
-    paddingRight: 50,
-  },
-  rowTitle: {
+  title: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 15,
     color: "#2C332A",
-    marginBottom: 1,
-    marginTop: 5,
+    lineHeight: 20,
   },
-  rowMeta: {
+  meta: {
     flexDirection: "row",
     alignItems: "center",
-    flexWrap: "wrap",
-    gap: 6,
-    marginTop: 4,
+    gap: 14,
   },
-  rowBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 999,
+  metaItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
-  rowBadgeText: {
+  metaText: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  rowStat: {
-    fontFamily: "NunitoSans_400Regular",
     fontSize: 12,
     color: "#7B8579",
   },
-  bookmarkBadge: {
+  bookmarkBtn: {
     position: "absolute",
-    top: 10,
-    right: 10,
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    right: 16,
+    top: "50%",
+    marginTop: -20,
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: "rgba(5,150,105,0.1)",
     alignItems: "center",
     justifyContent: "center",
   },

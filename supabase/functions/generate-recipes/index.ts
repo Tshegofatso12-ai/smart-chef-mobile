@@ -42,7 +42,7 @@ async function fetchPexelsImage(title: string, pexelsKey: string): Promise<strin
   }
 }
 
-/** Try to persist session + recipes to DB. Non-fatal — returns generated ID or null on failure. */
+/** Try to persist session + recipes to DB. Non-fatal — returns { sessionId, recipeIds } or null on failure. */
 async function persistToDb(
   user: { id: string },
   ingredients: unknown,
@@ -52,7 +52,7 @@ async function persistToDb(
     dietMatch: string; ingredients: string[]; steps: string[];
   }>,
   imageUrls: (string | null)[]
-): Promise<string | null> {
+): Promise<{ sessionId: string; recipeIds: string[] } | null> {
   try {
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -93,16 +93,20 @@ async function persistToDb(
       };
     });
 
-    const { error: recipesError } = await supabaseAdmin
+    const { data: insertedRecipes, error: recipesError } = await supabaseAdmin
       .from("recipes")
-      .insert(recipesToInsert);
+      .insert(recipesToInsert)
+      .select("id");
 
     if (recipesError) {
       console.error("[generate-recipes] DB recipes insert failed:", recipesError.message);
       return null;
     }
 
-    return sessionRow.id as string;
+    return {
+      sessionId: sessionRow.id as string,
+      recipeIds: (insertedRecipes ?? []).map((r: { id: string }) => r.id),
+    };
   } catch (e) {
     console.error("[generate-recipes] DB persist exception:", String(e));
     return null;
@@ -215,14 +219,14 @@ Example of ONE element (your array must have 3):
     );
 
     // Persist to DB — non-fatal, app works without it
-    const dbSessionId = await persistToDb(user, ingredients, dietFilter ?? null, parsed, imageUrls);
+    const dbResult = await persistToDb(user, ingredients, dietFilter ?? null, parsed, imageUrls);
 
-    // Build recipe objects using DB IDs when available, fallback to AI IDs
+    // Build recipe objects using actual DB UUIDs when available, fallback to local IDs
     const recipes = parsed.map((r, i) => {
       const dietColors = DIET_BADGE_COLORS[r.dietMatch] ?? DIET_BADGE_COLORS["low-fat"];
       const dietLabel = r.dietMatch.replace(/-/g, " ");
       return {
-        id: dbSessionId ? `${dbSessionId}-${i}` : `local-${Date.now()}-${i}`,
+        id: dbResult?.recipeIds[i] ?? `local-${Date.now()}-${i}`,
         title: r.title,
         cookTime: r.cookTime,
         calories: r.calories,
@@ -240,7 +244,7 @@ Example of ONE element (your array must have 3):
       };
     });
 
-    const sessionId = dbSessionId ?? `local-${Date.now()}`;
+    const sessionId = dbResult?.sessionId ?? `local-${Date.now()}`;
 
     return new Response(
       JSON.stringify({ sessionId, recipes }),
