@@ -42,6 +42,12 @@ const ICON_MAP: Record<string, IconMapping> = {
   "solar:camera-bold": { set: "Ionicons", name: "camera" },
   "solar:chef-hat-bold": { set: "MaterialCommunityIcons", name: "chef-hat" },
   "solar:lightbulb-bold": { set: "Ionicons", name: "bulb" },
+  // recipe screen redesign
+  "solar:share-bold-duotone":        { set: "Ionicons", name: "share-social" },
+  "solar:clock-circle-bold-duotone": { set: "Ionicons", name: "time-outline" },
+  "solar:fire-bold-duotone":         { set: "Ionicons", name: "flame" },
+  "solar:leaf-bold-duotone":         { set: "Ionicons", name: "leaf" },
+  "solar:play-bold-duotone":         { set: "Ionicons", name: "play" },
 };
 
 export function Icon({ icon, size = 20, color = "#000" }: IconProps) {
