@@ -35,6 +35,7 @@ try {
 import { Icon } from "@/components/Icon";
 import { RecipeRow } from "@/components/RecipeRow";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
+import { ProfileDrawer } from "@/components/ProfileDrawer";
 import { useAppContext } from "@/context/AppContext";
 import { useAuthContext } from "@/context/AuthContext";
 import {
@@ -81,18 +82,8 @@ export default function HomeScreen() {
     savedRecipeIds,
     sessions,
   } = useAppContext();
-  const { profile, user, signOut } = useAuthContext();
-
-  const handleAvatarPress = () => {
-    Alert.alert(
-      profile?.display_name ?? user?.email?.split("@")[0] ?? "Account",
-      user?.email,
-      [
-        { text: "Sign Out", style: "destructive", onPress: () => signOut() },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
-  };
+  const { profile, user } = useAuthContext();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // ─── Magic Scan spring animation ─────────────────────────────────────────
   const scanScale = useSharedValue(1);
@@ -238,7 +229,7 @@ export default function HomeScreen() {
             </Text>
           </View>
           <Pressable
-            onPress={handleAvatarPress}
+            onPress={() => setDrawerOpen(true)}
             style={({ pressed }) => [styles.avatarContainer, { opacity: pressed ? 0.75 : 1 }]}
           >
             {profile?.avatar_url ? (
@@ -454,6 +445,8 @@ export default function HomeScreen() {
         visible={isScanLoading || isVoiceLoading}
         message={isScanLoading ? "Scanning ingredients..." : "Processing voice..."}
       />
+
+      <ProfileDrawer visible={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </View>
   );
 }
@@ -492,6 +485,7 @@ const styles = StyleSheet.create({
   avatarGradient: {
     width: 44,
     height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
