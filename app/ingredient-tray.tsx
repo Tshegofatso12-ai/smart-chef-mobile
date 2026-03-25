@@ -402,8 +402,11 @@ export default function IngredientTrayScreen() {
       };
       addSession(session);
       router.push("/recipe-ideas");
-    } catch (err) {
-      Alert.alert("Error", "Failed to generate recipes. Please try again.");
+    } catch (err: any) {
+      const message = err?.message && err.message !== "Edge function returned a non-2xx status code"
+        ? err.message
+        : "Failed to generate recipes. Please check your connection and try again.";
+      Alert.alert("Error", message);
     } finally {
       setIsGenerating(false);
     }

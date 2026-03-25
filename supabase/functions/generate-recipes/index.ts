@@ -7,15 +7,19 @@ const corsHeaders = {
 };
 
 const DIET_LABEL: Record<string, string> = {
-  "low-fat": "Low-Fat (minimize saturated fats, use lean proteins and vegetables)",
-  "low-carb": "Low-Carb (limit starchy foods, favour vegetables and protein)",
+  "low-fat":      "Low-Fat (minimize saturated fats, use lean proteins and vegetables)",
+  "low-carb":     "Low-Carb (limit starchy foods, favour vegetables and protein)",
   "high-protein": "High-Protein (prioritize protein-dense ingredients in every dish)",
+  "keto":         "Keto (very low carb, high fat — avoid grains, legumes, and sugar)",
+  "vegan":        "Vegan (no animal products whatsoever — plant-based only)",
 };
 
 const DIET_BADGE_COLORS: Record<string, { color: string; bg: string }> = {
-  "low-fat": { color: "#059669", bg: "rgba(5,150,105,0.12)" },
-  "low-carb": { color: "#DDA77B", bg: "rgba(221,167,123,0.12)" },
+  "low-fat":      { color: "#059669", bg: "rgba(5,150,105,0.12)" },
+  "low-carb":     { color: "#DDA77B", bg: "rgba(221,167,123,0.12)" },
   "high-protein": { color: "#C97A7E", bg: "rgba(201,122,126,0.12)" },
+  "keto":         { color: "#C97A7E", bg: "rgba(201,122,126,0.12)" },
+  "vegan":        { color: "#059669", bg: "rgba(5,150,105,0.12)" },
 };
 
 const GRADIENT_PALETTE: Array<[string, string]> = [
@@ -38,6 +42,73 @@ async function fetchPexelsImage(title: string, pexelsKey: string): Promise<strin
   }
 }
 
+/** Try to persist session + recipes to DB. Non-fatal — returns generated ID or null on failure. */
+async function persistToDb(
+  user: { id: string },
+  ingredients: unknown,
+  dietFilter: string | null,
+  parsed: Array<{
+    id: string; title: string; cookTime: string; calories: string;
+    dietMatch: string; ingredients: string[]; steps: string[];
+  }>,
+  imageUrls: (string | null)[]
+): Promise<string | null> {
+  try {
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    const { data: sessionRow, error: sessionError } = await supabaseAdmin
+      .from("sessions")
+      .insert({ user_id: user.id, ingredients, diet_filter: dietFilter ?? null })
+      .select()
+      .single();
+
+    if (sessionError) {
+      console.error("[generate-recipes] DB session insert failed:", sessionError.message);
+      return null;
+    }
+
+    const recipesToInsert = parsed.map((r, i) => {
+      const dietColors = DIET_BADGE_COLORS[r.dietMatch] ?? DIET_BADGE_COLORS["low-fat"];
+      const dietLabel = r.dietMatch.replace(/-/g, " ");
+      return {
+        session_id: sessionRow.id,
+        user_id: user.id,
+        title: r.title,
+        cook_time: r.cookTime,
+        calories: r.calories,
+        diet_match: r.dietMatch,
+        gradient_colors: GRADIENT_PALETTE[i % GRADIENT_PALETTE.length],
+        badges: [{ label: dietLabel, ...dietColors }],
+        stats: [
+          { icon: "solar:clock-circle-bold", iconColor: "#059669", label: "Time",     value: r.cookTime },
+          { icon: "solar:fire-bold",         iconColor: "#C97A7E", label: "Calories", value: r.calories },
+          { icon: "solar:leaf-bold",         iconColor: "#059669", label: "Match",    value: dietLabel  },
+        ],
+        ingredients: r.ingredients,
+        steps: r.steps,
+        image_url: imageUrls[i] ?? null,
+      };
+    });
+
+    const { error: recipesError } = await supabaseAdmin
+      .from("recipes")
+      .insert(recipesToInsert);
+
+    if (recipesError) {
+      console.error("[generate-recipes] DB recipes insert failed:", recipesError.message);
+      return null;
+    }
+
+    return sessionRow.id as string;
+  } catch (e) {
+    console.error("[generate-recipes] DB persist exception:", String(e));
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -47,14 +118,23 @@ Deno.serve(async (req) => {
     const user = await requireUser(req);
 
     const { ingredients, dietFilter, userPreferences } = await req.json();
-    const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY")!;
-    const pexelsApiKey = Deno.env.get("PEXELS_API_KEY")!;
+
+    const anthropicApiKey = Deno.env.get("ANTHROPIC_API_KEY");
+    if (!anthropicApiKey) {
+      return new Response(
+        JSON.stringify({ error: "ANTHROPIC_API_KEY is not configured on this server." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const pexelsApiKey = Deno.env.get("PEXELS_API_KEY") ?? "";
 
     const ingredientNames = (ingredients as Array<{ name: string }>)
       .map((i) => i.name)
       .join(", ");
+
     const dietInstruction = dietFilter
-      ? DIET_LABEL[dietFilter] ?? "Make them delicious and creative."
+      ? (DIET_LABEL[dietFilter] ?? "Make them delicious and creative.")
       : "No specific diet restriction — just make them delicious and creative.";
 
     let allergyNote = "";
@@ -64,9 +144,9 @@ Deno.serve(async (req) => {
     let skillNote = "";
     if (userPreferences?.cooking_skill) {
       const skillMap: Record<string, string> = {
-        beginner: "Keep steps simple with basic techniques.",
+        beginner:     "Keep steps simple with basic techniques.",
         intermediate: "Standard home-cooking techniques are fine.",
-        advanced: "Feel free to use advanced techniques and complex preparations.",
+        advanced:     "Feel free to use advanced techniques and complex preparations.",
       };
       skillNote = `\nCooking skill level: ${skillMap[userPreferences.cooking_skill] ?? ""}`;
     }
@@ -95,7 +175,7 @@ Each object must have these exact fields:
 - title: string (creative, descriptive name)
 - cookTime: string (e.g. "20 min")
 - calories: string (estimated, e.g. "380 kcal")
-- dietMatch: one of "low-fat" | "low-carb" | "high-protein"
+- dietMatch: one of "low-fat" | "low-carb" | "high-protein" | "keto" | "vegan"
 - ingredients: string[] (each like "2 Chicken Breasts", "1 Cup Spinach")
 - steps: string[] (4-5 clear cooking steps, each a complete sentence)
 
@@ -105,6 +185,15 @@ Example of ONE element (your array must have 3):
         ],
       }),
     });
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      const detail = (errBody as any)?.error?.message ?? `Anthropic API error ${response.status}`;
+      return new Response(
+        JSON.stringify({ error: detail }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const result = await response.json();
     const raw = (result.content[0] as { text: string }).text.trim();
@@ -120,82 +209,48 @@ Example of ONE element (your array must have 3):
       steps: string[];
     }>;
 
-    // Fetch Pexels images in parallel
+    // Fetch Pexels images in parallel (non-fatal)
     const imageUrls = await Promise.all(
       parsed.map((r) => fetchPexelsImage(r.title, pexelsApiKey))
     );
 
-    // Persist to Supabase
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+    // Persist to DB — non-fatal, app works without it
+    const dbSessionId = await persistToDb(user, ingredients, dietFilter ?? null, parsed, imageUrls);
 
-    const { data: sessionRow, error: sessionError } = await supabaseAdmin
-      .from("sessions")
-      .insert({
-        user_id: user.id,
-        ingredients,
-        diet_filter: dietFilter ?? null,
-      })
-      .select()
-      .single();
-
-    if (sessionError) throw sessionError;
-
-    const recipesToInsert = parsed.map((r, i) => {
+    // Build recipe objects using DB IDs when available, fallback to AI IDs
+    const recipes = parsed.map((r, i) => {
       const dietColors = DIET_BADGE_COLORS[r.dietMatch] ?? DIET_BADGE_COLORS["low-fat"];
-      const dietLabel = r.dietMatch.replace("-", " ");
+      const dietLabel = r.dietMatch.replace(/-/g, " ");
       return {
-        session_id: sessionRow.id,
-        user_id: user.id,
+        id: dbSessionId ? `${dbSessionId}-${i}` : `local-${Date.now()}-${i}`,
         title: r.title,
-        cook_time: r.cookTime,
+        cookTime: r.cookTime,
         calories: r.calories,
-        diet_match: r.dietMatch,
-        gradient_colors: GRADIENT_PALETTE[i % GRADIENT_PALETTE.length],
+        dietMatch: r.dietMatch,
+        gradientColors: GRADIENT_PALETTE[i % GRADIENT_PALETTE.length],
         badges: [{ label: dietLabel, ...dietColors }],
         stats: [
-          { icon: "solar:clock-circle-bold", iconColor: "#059669", label: "Time", value: r.cookTime },
-          { icon: "solar:fire-bold", iconColor: "#C97A7E", label: "Calories", value: r.calories },
-          { icon: "solar:leaf-bold", iconColor: "#059669", label: "Match", value: dietLabel },
+          { icon: "solar:clock-circle-bold", iconColor: "#059669", label: "Time",     value: r.cookTime },
+          { icon: "solar:fire-bold",         iconColor: "#C97A7E", label: "Calories", value: r.calories },
+          { icon: "solar:leaf-bold",         iconColor: "#059669", label: "Match",    value: dietLabel  },
         ],
         ingredients: r.ingredients,
         steps: r.steps,
-        image_url: imageUrls[i] ?? null,
+        imageUrl: imageUrls[i] ?? null,
       };
     });
 
-    const { data: recipeRows, error: recipesError } = await supabaseAdmin
-      .from("recipes")
-      .insert(recipesToInsert)
-      .select();
-
-    if (recipesError) throw recipesError;
-
-    const recipes = recipeRows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      cookTime: row.cook_time,
-      calories: row.calories,
-      dietMatch: row.diet_match,
-      gradientColors: row.gradient_colors as [string, string],
-      badges: row.badges,
-      stats: row.stats,
-      ingredients: row.ingredients,
-      steps: row.steps,
-      imageUrl: row.image_url,
-    }));
+    const sessionId = dbSessionId ?? `local-${Date.now()}`;
 
     return new Response(
-      JSON.stringify({ sessionId: sessionRow.id, recipes }),
+      JSON.stringify({ sessionId, recipes }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
     if (err instanceof Response) return err;
-    return new Response(JSON.stringify({ error: String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: String(err) }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
 });
