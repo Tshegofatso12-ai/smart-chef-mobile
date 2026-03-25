@@ -624,15 +624,15 @@ const s = StyleSheet.create({
   // ── Segmented toggle ──────────────────────────────────────────────────────
   segmentWrap: {
     flexDirection: "row",
+    alignSelf: "center",
     backgroundColor: "#E8E6E1",
     borderRadius: 16,
     padding: 6,
     gap: 4,
   },
   segmentBtn: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 8,
     borderRadius: 12,
   },
   segmentBtnActive: {
