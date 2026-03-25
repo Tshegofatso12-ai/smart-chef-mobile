@@ -4,7 +4,7 @@ import {
   Text,
   Image,
   ScrollView,
-  Pressable,
+  TouchableOpacity,
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -39,17 +39,15 @@ function RecipeIdeaCard({
   const imageUrl = recipe.imageUrl ?? null;
 
   return (
-    <Pressable
+    <TouchableOpacity
       onPress={() =>
         router.push({
           pathname: "/recipe/[id]",
           params: { id: recipe.id, sessionId },
         })
       }
-      style={({ pressed }) => [
-        styles.card,
-        { opacity: pressed ? 0.92 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] },
-      ]}
+      style={styles.card}
+      activeOpacity={0.92}
     >
       {/* ── Hero ── */}
       <View style={styles.cardHero}>
@@ -108,20 +106,17 @@ function RecipeIdeaCard({
           <Text style={[styles.cardTitle, { flex: 1, paddingRight: 8 }]} numberOfLines={2}>
             {recipe.title}
           </Text>
-          <Pressable
-            onPress={(e) => {
-              e.stopPropagation();
-              toggleSaved(recipe.id, sessionId);
-            }}
+          <TouchableOpacity
+            onPress={() => toggleSaved(recipe.id, sessionId)}
             style={styles.bookmarkBtn}
-            hitSlop={8}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
             <Icon
               icon={isRecipeSaved(recipe.id) ? "solar:bookmark-bold" : "solar:bookmark-outline"}
               size={18}
               color={COLORS.primary}
             />
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* Stats row */}
@@ -142,7 +137,7 @@ function RecipeIdeaCard({
           </View>
         </View>
       </View>
-    </Pressable>
+    </TouchableOpacity>
   );
 }
 
@@ -158,12 +153,9 @@ export default function RecipeIdeasScreen() {
           <Text style={styles.emptySubtext}>
             Go back to the ingredient tray and tap Generate Recipe.
           </Text>
-          <Pressable
-            onPress={() => router.replace("/")}
-            style={styles.goHomeButton}
-          >
+          <TouchableOpacity onPress={() => router.replace("/")} style={styles.goHomeButton}>
             <Text style={styles.goHomeText}>Go Home</Text>
-          </Pressable>
+          </TouchableOpacity>
         </SafeAreaView>
       </View>
     );
@@ -174,15 +166,9 @@ export default function RecipeIdeasScreen() {
       <SafeAreaView style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.headerButton,
-              { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] },
-            ]}
-          >
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} activeOpacity={0.7}>
             <Icon icon="solar:alt-arrow-left-linear" size={22} color={COLORS.foreground} />
-          </Pressable>
+          </TouchableOpacity>
 
           <View style={{ alignItems: "center" }}>
             <Text style={styles.headerTitle}>Recipe Ideas</Text>
@@ -192,15 +178,9 @@ export default function RecipeIdeasScreen() {
             </Text>
           </View>
 
-          <Pressable
-            onPress={() => router.push("/saved")}
-            style={({ pressed }) => [
-              styles.headerButton,
-              { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] },
-            ]}
-          >
+          <TouchableOpacity onPress={() => router.push("/saved")} style={styles.headerButton} activeOpacity={0.7}>
             <Icon icon="solar:bookmark-outline" size={22} color={COLORS.foreground} />
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* Ingredient chips */}

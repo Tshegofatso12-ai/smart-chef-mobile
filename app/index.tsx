@@ -5,6 +5,7 @@ import {
   TextInput,
   ScrollView,
   Pressable,
+  TouchableOpacity,
   Image,
   StyleSheet,
   Alert,
@@ -231,10 +232,7 @@ export default function HomeScreen() {
               {profile?.display_name ?? user?.email?.split("@")[0] ?? "Chef"} 👨‍🍳
             </Text>
           </View>
-          <Pressable
-            onPress={() => router.push("/profile")}
-            style={({ pressed }) => [styles.avatarContainer, { opacity: pressed ? 0.75 : 1 }]}
-          >
+          <TouchableOpacity onPress={() => router.push("/profile")} style={styles.avatarContainer} activeOpacity={0.75}>
             {profile?.avatar_url ? (
               <Image
                 source={{ uri: profile.avatar_url }}
@@ -253,7 +251,7 @@ export default function HomeScreen() {
                 </Text>
               </LinearGradient>
             )}
-          </Pressable>
+          </TouchableOpacity>
         </View>
 
         {/* ── Diet Filters ── */}
@@ -378,13 +376,10 @@ export default function HomeScreen() {
           {/* ── Voice Input ── */}
           <View style={styles.section}>
             <View style={styles.voiceCard}>
-              <Pressable
+              <TouchableOpacity
                 onPress={handleVoice}
-                style={({ pressed }) => [
-                  styles.voiceMicButton,
-                  isListening && styles.voiceMicButtonActive,
-                  { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] },
-                ]}
+                style={[styles.voiceMicButton, isListening && styles.voiceMicButtonActive]}
+                activeOpacity={0.85}
               >
                 {isVoiceLoading ? (
                   <ActivityIndicator size="large" color={COLORS.primaryForeground} />
@@ -395,7 +390,7 @@ export default function HomeScreen() {
                     color={isListening ? COLORS.primaryForeground : COLORS.foreground}
                   />
                 )}
-              </Pressable>
+              </TouchableOpacity>
 
               <View style={{ flex: 1 }}>
                 <Text style={styles.voiceTitle}>

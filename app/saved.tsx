@@ -4,6 +4,7 @@ import {
   Text,
   ScrollView,
   Pressable,
+  TouchableOpacity,
   StyleSheet,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -66,22 +67,9 @@ export default function SavedScreen() {
       <SafeAreaView style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [
-              styles.headerButton,
-              {
-                opacity: pressed ? 0.7 : 1,
-                transform: [{ scale: pressed ? 0.95 : 1 }],
-              },
-            ]}
-          >
-            <Icon
-              icon="solar:alt-arrow-left-linear"
-              size={22}
-              color={COLORS.foreground}
-            />
-          </Pressable>
+          <TouchableOpacity onPress={() => router.back()} style={styles.headerButton} activeOpacity={0.7}>
+            <Icon icon="solar:alt-arrow-left-linear" size={22} color={COLORS.foreground} />
+          </TouchableOpacity>
 
           <Text style={styles.headerTitle}>My Recipes</Text>
 
