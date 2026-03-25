@@ -134,6 +134,7 @@ export default function RecipeCardScreen() {
             <Icon icon="solar:fire-bold-duotone" size={26} color={C.destructive} />
             <Text style={s.statLabel}>Calories</Text>
             <Text style={s.statValue}>{recipe.calories}</Text>
+            <Text style={s.statSub}>per serving</Text>
           </View>
           {/* Match */}
           <View style={s.statCard}>
@@ -202,6 +203,73 @@ export default function RecipeCardScreen() {
           <Text style={s.ctaBtnText}>Start Step-by-Step</Text>
         </TouchableOpacity>
       </View>
+
+      {/* ── Step-by-step overlay ── */}
+      {currentStep !== null && (
+        <View style={[s.overlay, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+
+          {/* Top bar */}
+          <View style={s.overlayHeader}>
+            <View style={s.stepPill}>
+              <Text style={s.stepPillText}>Step {currentStep} of {recipe.steps.length}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setCurrentStep(null)}
+              style={s.overlayCloseBtn}
+              activeOpacity={0.7}
+            >
+              <Icon icon="hugeicons:cancel-01" size={18} color={C.fg} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Progress bar */}
+          <View style={s.progressTrack}>
+            <View style={[s.progressFill, { width: `${(currentStep / recipe.steps.length) * 100}%` as any }]} />
+          </View>
+
+          {/* Step content */}
+          <View style={s.overlayBody}>
+            <View style={s.overlayStepCircle}>
+              <Text style={s.overlayStepNum}>{currentStep}</Text>
+            </View>
+            <Text style={s.overlayStepText}>{recipe.steps[currentStep - 1]}</Text>
+          </View>
+
+          {/* Navigation */}
+          <View style={s.overlayNav}>
+            <TouchableOpacity
+              onPress={() => setCurrentStep((s) => Math.max(1, (s ?? 1) - 1))}
+              style={[s.navBtn, s.navBtnSecondary, currentStep === 1 && { opacity: 0.35 }]}
+              activeOpacity={0.8}
+              disabled={currentStep === 1}
+            >
+              <Icon icon="solar:alt-arrow-left-linear" size={20} color={C.fg} />
+              <Text style={s.navBtnSecondaryText}>Previous</Text>
+            </TouchableOpacity>
+
+            {currentStep < recipe.steps.length ? (
+              <TouchableOpacity
+                onPress={() => setCurrentStep((s) => (s ?? 1) + 1)}
+                style={[s.navBtn, s.navBtnPrimary]}
+                activeOpacity={0.88}
+              >
+                <Text style={s.navBtnPrimaryText}>Next</Text>
+                <Icon icon="solar:alt-arrow-right-linear" size={20} color={C.primaryFg} />
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => setCurrentStep(null)}
+                style={[s.navBtn, s.navBtnPrimary]}
+                activeOpacity={0.88}
+              >
+                <Icon icon="solar:check-circle-bold" size={20} color={C.primaryFg} />
+                <Text style={s.navBtnPrimaryText}>Finish</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+        </View>
+      )}
 
     </View>
   );
@@ -286,6 +354,13 @@ const s = StyleSheet.create({
     fontSize: 13,
     color: "#2C332A",
     textAlign: "center",
+  },
+  statSub: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 9,
+    color: "#7B8579",
+    textAlign: "center",
+    marginTop: -2,
   },
 
   // ── Section headers ───────────────────────────────────────────────────────
@@ -413,6 +488,128 @@ const s = StyleSheet.create({
   ctaBtnText: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 17,
+    color: "#F9F6F0",
+  },
+
+  // ── Step-by-step overlay ──────────────────────────────────────────────────
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#F9F6F0",
+    flexDirection: "column",
+    paddingHorizontal: 24,
+  },
+  overlayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  stepPill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "rgba(5,150,105,0.1)",
+  },
+  stepPillText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 13,
+    color: "#059669",
+  },
+  overlayCloseBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 14,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(226,223,216,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  progressTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(226,223,216,0.6)",
+    marginBottom: 32,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#059669",
+  },
+  overlayBody: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 32,
+    paddingHorizontal: 8,
+  },
+  overlayStepCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 28,
+    backgroundColor: "#059669",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  overlayStepNum: {
+    fontFamily: "NunitoSans_800ExtraBold",
+    fontSize: 32,
+    color: "#FFFFFF",
+  },
+  overlayStepText: {
+    fontFamily: "NunitoSans_600SemiBold",
+    fontSize: 20,
+    color: "#2C332A",
+    lineHeight: 32,
+    textAlign: "center",
+  },
+  overlayNav: {
+    flexDirection: "row",
+    gap: 12,
+    paddingBottom: 16,
+  },
+  navBtn: {
+    flex: 1,
+    height: 60,
+    borderRadius: 28,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  navBtnSecondary: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "rgba(226,223,216,0.6)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  navBtnSecondaryText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 15,
+    color: "#2C332A",
+  },
+  navBtnPrimary: {
+    backgroundColor: "#2C332A",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  navBtnPrimaryText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 15,
     color: "#F9F6F0",
   },
 

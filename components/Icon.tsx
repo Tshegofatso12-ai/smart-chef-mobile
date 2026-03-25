@@ -55,6 +55,8 @@ const ICON_MAP: Record<string, IconMapping> = {
   "solar:magnifer-bold-duotone":     { set: "Ionicons", name: "search" },
   "solar:chef-hat-bold-duotone":     { set: "MaterialCommunityIcons", name: "chef-hat" },
   "solar:user-bold-duotone":         { set: "Ionicons", name: "person" },
+  "solar:magnifer-linear":           { set: "Ionicons", name: "search-outline" },
+  "solar:filter-bold-duotone":       { set: "Ionicons", name: "options" },
 };
 
 export function Icon({ icon, size = 20, color = "#000" }: IconProps) {
