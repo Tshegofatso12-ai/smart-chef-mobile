@@ -58,7 +58,6 @@ export default function AuthScreen() {
           password,
         });
         if (signInError) throw signInError;
-        // Check if onboarding was completed
         const { data: profile } = await supabase
           .from("profiles")
           .select("onboarding_complete")
@@ -84,6 +83,7 @@ export default function AuthScreen() {
           style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
+          {/* Scrollable form */}
           <ScrollView
             contentContainerStyle={styles.scroll}
             keyboardShouldPersistTaps="handled"
@@ -179,8 +179,10 @@ export default function AuthScreen() {
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             )}
+          </ScrollView>
 
-            {/* Submit */}
+          {/* Sticky submit button — always visible above keyboard */}
+          <View style={styles.footer}>
             <Pressable
               style={({ pressed }) => [styles.submitButton, { opacity: pressed ? 0.85 : 1 }]}
               onPress={handleSubmit}
@@ -194,7 +196,7 @@ export default function AuthScreen() {
                 </Text>
               )}
             </Pressable>
-          </ScrollView>
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
@@ -204,7 +206,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9F6F0" },
   safe: { flex: 1 },
-  scroll: { flexGrow: 1, paddingHorizontal: 28, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 28, paddingTop: 0, paddingBottom: 16 },
   backButton: {
     width: 40,
     height: 40,
@@ -289,7 +291,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(201,122,126,0.08)",
     borderRadius: 12,
     padding: 12,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   errorText: {
     fontFamily: "NunitoSans_600SemiBold",
@@ -297,13 +299,18 @@ const styles = StyleSheet.create({
     color: "#C97A7E",
     flex: 1,
   },
+  footer: {
+    paddingHorizontal: 28,
+    paddingBottom: 16,
+    paddingTop: 8,
+    backgroundColor: "#F9F6F0",
+  },
   submitButton: {
     height: 56,
     borderRadius: 999,
     backgroundColor: "#059669",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
