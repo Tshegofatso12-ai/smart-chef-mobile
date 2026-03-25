@@ -231,17 +231,23 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                 style={styles.statsCard}
               >
                 <View style={styles.statCol}>
-                  <Text style={styles.statNum}>{sessions.length}</Text>
+                  <Text style={[styles.statNum, sessions.length > 0 && styles.statNumActive]}>
+                    {sessions.length || "—"}
+                  </Text>
                   <Text style={styles.statLbl}>SESSIONS</Text>
                 </View>
                 <View style={styles.statLine} />
                 <View style={styles.statCol}>
-                  <Text style={styles.statNum}>{savedRecipeIds.length}</Text>
+                  <Text style={[styles.statNum, savedRecipeIds.length > 0 && styles.statNumActive]}>
+                    {savedRecipeIds.length || "—"}
+                  </Text>
                   <Text style={styles.statLbl}>SAVED</Text>
                 </View>
                 <View style={styles.statLine} />
                 <View style={styles.statCol}>
-                  <Text style={styles.statNum}>{totalRecipes}</Text>
+                  <Text style={[styles.statNum, totalRecipes > 0 && styles.statNumActive]}>
+                    {totalRecipes || "—"}
+                  </Text>
                   <Text style={styles.statLbl}>RECIPES</Text>
                 </View>
               </LinearGradient>
@@ -321,9 +327,9 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                     style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
                   >
                     <View style={styles.menuRowIcon}>
-                      <Ionicons name="log-out-outline" size={18} color="#7B8579" />
+                      <Ionicons name="log-out-outline" size={18} color="#C97A7E" />
                     </View>
-                    <Text style={styles.menuRowLabel}>Sign Out</Text>
+                    <Text style={[styles.menuRowLabel, styles.signOutLabel]}>Sign Out</Text>
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
 
@@ -412,7 +418,7 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 18,
+    fontSize: 24,
     color: "#2C332A",
   },
   editPill: {
@@ -466,8 +472,9 @@ const styles = StyleSheet.create({
   },
   profileEmail: {
     fontFamily: "NunitoSans_400Regular",
-    fontSize: 13,
+    fontSize: 12,
     color: "#7B8579",
+    opacity: 0.7,
   },
 
   // Stats
@@ -475,51 +482,62 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 18,
-    paddingVertical: 16,
+    paddingVertical: 22,
     marginBottom: 24,
     borderWidth: 1,
     borderColor: "rgba(5,150,105,0.12)",
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   statCol: { flex: 1, alignItems: "center" },
   statNum: {
     fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 22,
+    fontSize: 30,
     color: "#2C332A",
     marginBottom: 2,
   },
+  statNumActive: { color: "#059669" },
   statLbl: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 9,
     color: "#7B8579",
     letterSpacing: 0.8,
   },
-  statLine: { width: 1, height: 32, backgroundColor: "rgba(5,150,105,0.15)" },
+  statLine: { width: 1, height: 36, backgroundColor: "rgba(5,150,105,0.15)" },
 
   // Sections
-  section: { marginBottom: 20 },
+  section: { marginBottom: 26 },
   sectionLabelRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 12,
   },
   sectionLabel: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 11,
     color: "#7B8579",
-    letterSpacing: 1,
-    marginBottom: 8,
+    letterSpacing: 1.5,
+    marginBottom: 12,
   },
 
   // Card container
   card: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 16,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: "#EAE8E3",
     overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  rowDivider: { height: 1, backgroundColor: "#F4F2EE", marginLeft: 52 },
+  rowDivider: { height: 1, backgroundColor: "#F4F2EE", marginLeft: 62 },
 
   // Preference row
   prefRow: {
@@ -537,23 +555,23 @@ const styles = StyleSheet.create({
     color: "#2C332A",
   },
   toggle: {
-    width: 44,
-    height: 26,
-    borderRadius: 13,
+    width: 50,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: "#E2DFD8",
-    padding: 3,
+    padding: 4,
     justifyContent: "center",
   },
   toggleOn: { backgroundColor: "#059669" },
   toggleThumb: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     backgroundColor: "#FFFFFF",
     alignSelf: "flex-start",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 2,
     elevation: 2,
   },
@@ -568,9 +586,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   menuRowIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: "#F4F2EE",
     alignItems: "center",
     justifyContent: "center",
@@ -598,6 +616,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#7B8579",
   },
+  signOutLabel: { color: "#C97A7E" },
   destructiveLabel: { color: "#C97A7E" },
 
   bottomPad: { height: 24 },
