@@ -15,6 +15,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { supabase } from "@/lib/supabase";
 import { useAuthContext } from "@/context/AuthContext";
@@ -22,12 +23,12 @@ import { useAppContext } from "@/context/AppContext";
 import type { DietFilter } from "@/types";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
-const DRAWER_WIDTH = SCREEN_WIDTH * 0.82;
+const DRAWER_WIDTH = SCREEN_WIDTH * 0.84;
 
-const DIET_OPTIONS: { id: DietFilter; label: string; emoji: string; color: string }[] = [
-  { id: "low-fat",      label: "Low-Fat",      emoji: "🥗", color: "#059669" },
-  { id: "low-carb",     label: "Low-Carb",     emoji: "🥩", color: "#DDA77B" },
-  { id: "high-protein", label: "High-Protein", emoji: "💪", color: "#C97A7E" },
+const DIET_OPTIONS: { id: DietFilter; label: string; color: string }[] = [
+  { id: "low-fat",      label: "Low-Fat",      color: "#059669" },
+  { id: "low-carb",     label: "Low-Carb",     color: "#DDA77B" },
+  { id: "high-protein", label: "High-Protein", color: "#C97A7E" },
 ];
 
 type Props = { visible: boolean; onClose: () => void };
@@ -46,7 +47,6 @@ export function ProfileDrawer({ visible, onClose }: Props) {
   const [savingPrefs,   setSavingPrefs]   = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // Sync local state when drawer opens
   useEffect(() => {
     if (visible) {
       setDisplayName(profile?.display_name ?? "");
@@ -54,39 +54,19 @@ export function ProfileDrawer({ visible, onClose }: Props) {
     }
   }, [visible, profile]);
 
-  // Slide animation
   useEffect(() => {
     if (visible) {
       Animated.parallel([
-        Animated.spring(translateX, {
-          toValue: 0,
-          damping: 22,
-          stiffness: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropAlpha, {
-          toValue: 1,
-          duration: 220,
-          useNativeDriver: true,
-        }),
+        Animated.spring(translateX, { toValue: 0, damping: 22, stiffness: 200, useNativeDriver: true }),
+        Animated.timing(backdropAlpha, { toValue: 1, duration: 220, useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(translateX, {
-          toValue: DRAWER_WIDTH,
-          duration: 220,
-          useNativeDriver: true,
-        }),
-        Animated.timing(backdropAlpha, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
+        Animated.timing(translateX, { toValue: DRAWER_WIDTH, duration: 220, useNativeDriver: true }),
+        Animated.timing(backdropAlpha, { toValue: 0, duration: 200, useNativeDriver: true }),
       ]).start();
     }
   }, [visible]);
-
-  // ─── Handlers ──────────────────────────────────────────────────────────────
 
   const saveName = async () => {
     if (!displayName.trim()) return;
@@ -94,10 +74,10 @@ export function ProfileDrawer({ visible, onClose }: Props) {
     try {
       const { data: { user: u } } = await supabase.auth.getUser();
       if (!u) return;
-      await supabase
-        .from("profiles")
-        .update({ display_name: displayName.trim(), updated_at: new Date().toISOString() })
-        .eq("id", u.id);
+      await supabase.from("profiles").update({
+        display_name: displayName.trim(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", u.id);
       await refreshProfile();
       setEditingName(false);
     } finally {
@@ -114,10 +94,10 @@ export function ProfileDrawer({ visible, onClose }: Props) {
     try {
       const { data: { user: u } } = await supabase.auth.getUser();
       if (!u) return;
-      await supabase
-        .from("profiles")
-        .update({ dietary_preferences: next, updated_at: new Date().toISOString() })
-        .eq("id", u.id);
+      await supabase.from("profiles").update({
+        dietary_preferences: next,
+        updated_at: new Date().toISOString(),
+      }).eq("id", u.id);
       await refreshProfile();
     } finally {
       setSavingPrefs(false);
@@ -125,16 +105,9 @@ export function ProfileDrawer({ visible, onClose }: Props) {
   };
 
   const handleSignOut = () => {
-    Alert.alert("Sign Out", "Are you sure?", [
+    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
       { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          onClose();
-          await signOut();
-        },
-      },
+      { text: "Sign Out", style: "destructive", onPress: async () => { onClose(); await signOut(); } },
     ]);
   };
 
@@ -173,8 +146,6 @@ export function ProfileDrawer({ visible, onClose }: Props) {
   const initial = (profile?.display_name ?? user?.email ?? "C")[0].toUpperCase();
   const totalRecipes = sessions.reduce((n, s) => n + s.recipes.length, 0);
 
-  // ─── Render ────────────────────────────────────────────────────────────────
-
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -184,38 +155,31 @@ export function ProfileDrawer({ visible, onClose }: Props) {
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
 
-        {/* Drawer panel */}
+        {/* Drawer */}
         <Animated.View style={[styles.panel, { transform: [{ translateX }] }]}>
           <SafeAreaView style={styles.safe}>
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.scrollContent}
-            >
-              {/* Close */}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+
+              {/* Close button */}
               <Pressable
                 onPress={onClose}
                 style={({ pressed }) => [styles.closeBtn, { opacity: pressed ? 0.6 : 1 }]}
               >
-                <Text style={styles.closeBtnText}>✕</Text>
+                <Ionicons name="close" size={18} color="#2C332A" />
               </Pressable>
 
-              {/* ── Profile header ── */}
+              {/* ── Avatar + name ── */}
               <View style={styles.profileSection}>
                 <LinearGradient
                   colors={["#34D399", "#059669"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
-                  style={styles.bigAvatar}
+                  style={styles.avatar}
                 >
-                  {profile?.avatar_url ? (
-                    <Image
-                      source={{ uri: profile.avatar_url }}
-                      style={StyleSheet.absoluteFill}
-                      resizeMode="cover"
-                    />
-                  ) : (
-                    <Text style={styles.bigAvatarInitial}>{initial}</Text>
-                  )}
+                  {profile?.avatar_url
+                    ? <Image source={{ uri: profile.avatar_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+                    : <Text style={styles.avatarInitial}>{initial}</Text>
+                  }
                 </LinearGradient>
 
                 {editingName ? (
@@ -227,7 +191,7 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                       autoFocus
                       returnKeyType="done"
                       onSubmitEditing={saveName}
-                      placeholder="Your display name"
+                      placeholder="Display name"
                       placeholderTextColor="#7B8579"
                     />
                     <Pressable
@@ -246,71 +210,67 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                     onPress={() => setEditingName(true)}
                     style={({ pressed }) => [styles.nameRow, { opacity: pressed ? 0.7 : 1 }]}
                   >
-                    <Text style={styles.profileName}>
+                    <Text style={styles.profileName} numberOfLines={1}>
                       {profile?.display_name ?? user?.email?.split("@")[0] ?? "Chef"}
                     </Text>
-                    <View style={styles.editBadge}>
-                      <Text style={styles.editBadgeText}>Edit</Text>
+                    <View style={styles.editPill}>
+                      <Ionicons name="pencil" size={11} color="#059669" />
+                      <Text style={styles.editPillText}>Edit</Text>
                     </View>
                   </Pressable>
                 )}
 
-                <Text style={styles.profileEmail}>{user?.email}</Text>
+                <Text style={styles.profileEmail} numberOfLines={1}>{user?.email}</Text>
               </View>
 
               {/* ── Stats ── */}
               <LinearGradient
-                colors={["rgba(5,150,105,0.08)", "rgba(52,211,153,0.05)"]}
+                colors={["rgba(5,150,105,0.07)", "rgba(52,211,153,0.04)"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.statsCard}
               >
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{sessions.length}</Text>
-                  <Text style={styles.statLabel}>Sessions</Text>
+                <View style={styles.statCol}>
+                  <Text style={styles.statNum}>{sessions.length}</Text>
+                  <Text style={styles.statLbl}>SESSIONS</Text>
                 </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{savedRecipeIds.length}</Text>
-                  <Text style={styles.statLabel}>Saved</Text>
+                <View style={styles.statLine} />
+                <View style={styles.statCol}>
+                  <Text style={styles.statNum}>{savedRecipeIds.length}</Text>
+                  <Text style={styles.statLbl}>SAVED</Text>
                 </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statValue}>{totalRecipes}</Text>
-                  <Text style={styles.statLabel}>Recipes</Text>
+                <View style={styles.statLine} />
+                <View style={styles.statCol}>
+                  <Text style={styles.statNum}>{totalRecipes}</Text>
+                  <Text style={styles.statLbl}>RECIPES</Text>
                 </View>
               </LinearGradient>
 
-              {/* ── Dietary preferences ── */}
+              {/* ── Dietary Preferences ── */}
               <View style={styles.section}>
-                <View style={styles.sectionHeader}>
-                  <Text style={styles.sectionTitle}>Dietary Preferences</Text>
+                <View style={styles.sectionLabelRow}>
+                  <Text style={styles.sectionLabel}>DIETARY PREFERENCES</Text>
                   {savingPrefs && <ActivityIndicator size="small" color="#059669" />}
                 </View>
-                <View style={styles.prefChips}>
-                  {DIET_OPTIONS.map((opt) => {
+                <View style={styles.card}>
+                  {DIET_OPTIONS.map((opt, i) => {
                     const isOn = selectedPrefs.includes(opt.id);
                     return (
-                      <Pressable
-                        key={opt.id}
-                        onPress={() => togglePref(opt.id)}
-                        style={({ pressed }) => [
-                          styles.prefChip,
-                          isOn && { borderColor: opt.color },
-                          { opacity: pressed ? 0.75 : 1 },
-                        ]}
-                      >
-                        {isOn && (
-                          <LinearGradient
-                            colors={[`${opt.color}18`, `${opt.color}08`]}
-                            style={StyleSheet.absoluteFill}
-                          />
-                        )}
-                        <Text style={styles.prefEmoji}>{opt.emoji}</Text>
-                        <Text style={[styles.prefLabel, isOn && { color: opt.color }]}>
-                          {opt.label}
-                        </Text>
-                      </Pressable>
+                      <React.Fragment key={opt.id}>
+                        {i > 0 && <View style={styles.rowDivider} />}
+                        <Pressable
+                          onPress={() => togglePref(opt.id)}
+                          style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                        >
+                          <View style={styles.prefRowLeft}>
+                            <View style={[styles.prefDot, { backgroundColor: isOn ? opt.color : "#E2DFD8" }]} />
+                            <Text style={styles.prefRowLabel}>{opt.label}</Text>
+                          </View>
+                          <View style={[styles.toggle, isOn && styles.toggleOn]}>
+                            <Animated.View style={[styles.toggleThumb, isOn && styles.toggleThumbOn]} />
+                          </View>
+                        </Pressable>
+                      </React.Fragment>
                     );
                   })}
                 </View>
@@ -318,67 +278,77 @@ export function ProfileDrawer({ visible, onClose }: Props) {
 
               {/* ── Activity ── */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Activity</Text>
-                <View style={styles.menuCard}>
+                <Text style={styles.sectionLabel}>ACTIVITY</Text>
+                <View style={styles.card}>
                   <Pressable
                     onPress={() => navigate("/saved")}
-                    style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
                   >
-                    <Text style={styles.menuEmoji}>🔖</Text>
-                    <Text style={styles.menuLabel}>Saved Recipes</Text>
-                    <View style={styles.menuBadge}>
-                      <Text style={styles.menuBadgeText}>{savedRecipeIds.length}</Text>
+                    <View style={styles.menuRowIcon}>
+                      <Ionicons name="bookmark-outline" size={18} color="#059669" />
                     </View>
-                    <Text style={styles.menuArrow}>›</Text>
+                    <Text style={styles.menuRowLabel}>Saved Recipes</Text>
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{savedRecipeIds.length}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
 
-                  <View style={styles.menuDivider} />
+                  <View style={styles.rowDivider} />
 
                   <Pressable
                     onPress={() => navigate("/saved")}
-                    style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
                   >
-                    <Text style={styles.menuEmoji}>📋</Text>
-                    <Text style={styles.menuLabel}>Recipe History</Text>
-                    <View style={styles.menuBadge}>
-                      <Text style={styles.menuBadgeText}>{sessions.length}</Text>
+                    <View style={styles.menuRowIcon}>
+                      <MaterialCommunityIcons name="history" size={18} color="#059669" />
                     </View>
-                    <Text style={styles.menuArrow}>›</Text>
+                    <Text style={styles.menuRowLabel}>Recipe History</Text>
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{sessions.length}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
                 </View>
               </View>
 
               {/* ── Account ── */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Account</Text>
-                <View style={styles.menuCard}>
+                <Text style={styles.sectionLabel}>ACCOUNT</Text>
+                <View style={styles.card}>
                   <Pressable
                     onPress={handleSignOut}
-                    style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
                   >
-                    <Text style={styles.menuEmoji}>🚪</Text>
-                    <Text style={styles.menuLabel}>Sign Out</Text>
-                    <Text style={styles.menuArrow}>›</Text>
+                    <View style={styles.menuRowIcon}>
+                      <Ionicons name="log-out-outline" size={18} color="#7B8579" />
+                    </View>
+                    <Text style={styles.menuRowLabel}>Sign Out</Text>
+                    <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
 
-                  <View style={styles.menuDivider} />
+                  <View style={styles.rowDivider} />
 
                   <Pressable
                     onPress={handleDeleteAccount}
                     disabled={deleting}
-                    style={({ pressed }) => [styles.menuItem, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
                   >
                     {deleting
-                      ? <ActivityIndicator size="small" color="#C97A7E" style={{ marginRight: 12 }} />
-                      : <Text style={styles.menuEmoji}>🗑️</Text>
+                      ? <ActivityIndicator size="small" color="#C97A7E" style={styles.menuRowIcon} />
+                      : (
+                        <View style={styles.menuRowIcon}>
+                          <Ionicons name="trash-outline" size={18} color="#C97A7E" />
+                        </View>
+                      )
                     }
-                    <Text style={[styles.menuLabel, { color: "#C97A7E" }]}>Delete Account</Text>
-                    <Text style={styles.menuArrow}>›</Text>
+                    <Text style={[styles.menuRowLabel, styles.destructiveLabel]}>Delete Account</Text>
+                    <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
                 </View>
               </View>
 
-              <View style={{ height: 32 }} />
+              <View style={styles.bottomPad} />
             </ScrollView>
           </SafeAreaView>
         </Animated.View>
@@ -388,63 +358,50 @@ export function ProfileDrawer({ visible, onClose }: Props) {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-  },
-  backdropFill: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(44,51,42,0.5)",
-  },
+  overlay: { flex: 1, flexDirection: "row", justifyContent: "flex-end" },
+  backdropFill: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(44,51,42,0.45)" },
   panel: {
     width: DRAWER_WIDTH,
     height: "100%",
     backgroundColor: "#F9F6F0",
     shadowColor: "#000",
-    shadowOffset: { width: -4, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 20,
+    shadowOffset: { width: -6, height: 0 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 24,
   },
   safe: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 40 },
+  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 },
 
+  // Close
   closeBtn: {
-    alignSelf: "flex-end",
+    alignSelf: "flex-start",
     width: 36,
     height: 36,
     borderRadius: 18,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: "#E2DFD8",
   },
-  closeBtnText: {
-    fontSize: 14,
-    color: "#2C332A",
-    fontFamily: "NunitoSans_700Bold",
-  },
 
-  // Profile header
-  profileSection: { alignItems: "center", marginBottom: 20 },
-  bigAvatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  // Profile
+  profileSection: { alignItems: "center", paddingBottom: 20 },
+  avatar: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    marginBottom: 12,
     overflow: "hidden",
   },
-  bigAvatarInitial: {
+  avatarInitial: {
     fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 32,
+    fontSize: 30,
     color: "#FFFFFF",
   },
   nameRow: {
@@ -455,16 +412,20 @@ const styles = StyleSheet.create({
   },
   profileName: {
     fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 20,
+    fontSize: 18,
     color: "#2C332A",
   },
-  editBadge: {
+  editPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: "rgba(5,150,105,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(5,150,105,0.3)",
   },
-  editBadgeText: {
+  editPillText: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 11,
     color: "#059669",
@@ -475,6 +436,7 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 4,
     width: "100%",
+    paddingHorizontal: 4,
   },
   nameInput: {
     flex: 1,
@@ -492,135 +454,151 @@ const styles = StyleSheet.create({
     height: 44,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: "#059669",
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#059669",
   },
   nameSaveBtnText: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 14,
-    color: "#FFFFFF",
+    color: "#059669",
   },
   profileEmail: {
     fontFamily: "NunitoSans_400Regular",
     fontSize: 13,
     color: "#7B8579",
-    marginTop: 2,
   },
 
   // Stats
   statsCard: {
     flexDirection: "row",
-    borderRadius: 20,
-    paddingVertical: 18,
-    paddingHorizontal: 20,
+    alignItems: "center",
+    borderRadius: 18,
+    paddingVertical: 16,
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: "rgba(5,150,105,0.15)",
+    borderColor: "rgba(5,150,105,0.12)",
   },
-  statItem: { flex: 1, alignItems: "center" },
-  statValue: {
+  statCol: { flex: 1, alignItems: "center" },
+  statNum: {
     fontFamily: "NunitoSans_800ExtraBold",
     fontSize: 22,
     color: "#2C332A",
     marginBottom: 2,
   },
-  statLabel: {
-    fontFamily: "NunitoSans_400Regular",
-    fontSize: 11,
+  statLbl: {
+    fontFamily: "NunitoSans_600SemiBold",
+    fontSize: 9,
     color: "#7B8579",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.8,
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: "rgba(5,150,105,0.15)",
-    marginVertical: 4,
-  },
+  statLine: { width: 1, height: 32, backgroundColor: "rgba(5,150,105,0.15)" },
 
   // Sections
-  section: { marginBottom: 24 },
-  sectionHeader: {
+  section: { marginBottom: 20 },
+  sectionLabelRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 8,
   },
-  sectionTitle: {
+  sectionLabel: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 13,
+    fontSize: 11,
     color: "#7B8579",
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
-    marginBottom: 10,
+    letterSpacing: 1,
+    marginBottom: 8,
   },
 
-  // Pref chips
-  prefChips: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  prefChip: {
+  // Card container
+  card: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#EAE8E3",
+    overflow: "hidden",
+  },
+  rowDivider: { height: 1, backgroundColor: "#F4F2EE", marginLeft: 52 },
+
+  // Preference row
+  prefRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: "#E2DFD8",
-    backgroundColor: "#FFFFFF",
-    overflow: "hidden",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  prefEmoji: { fontSize: 14 },
-  prefLabel: {
+  prefRowLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  prefDot: { width: 10, height: 10, borderRadius: 5 },
+  prefRowLabel: {
     fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 13,
+    fontSize: 14,
     color: "#2C332A",
   },
-
-  // Menu card
-  menuCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#E2DFD8",
-    overflow: "hidden",
+  toggle: {
+    width: 44,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#E2DFD8",
+    padding: 3,
+    justifyContent: "center",
   },
-  menuItem: {
+  toggleOn: { backgroundColor: "#059669" },
+  toggleThumb: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#FFFFFF",
+    alignSelf: "flex-start",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.15,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  toggleThumbOn: { alignSelf: "flex-end" },
+
+  // Menu row
+  menuRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
-  menuDivider: {
-    height: 1,
-    backgroundColor: "#F0EFEA",
-    marginHorizontal: 16,
-  },
-  menuEmoji: { fontSize: 18, marginRight: 12 },
-  menuLabel: {
-    flex: 1,
-    fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 15,
-    color: "#2C332A",
-  },
-  menuBadge: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "rgba(5,150,105,0.1)",
+  menuRowIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: "#F4F2EE",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 6,
-    marginRight: 8,
+    flexShrink: 0,
   },
-  menuBadgeText: {
+  menuRowLabel: {
+    fontFamily: "NunitoSans_600SemiBold",
+    fontSize: 14,
+    color: "#2C332A",
+    flexGrow: 1,
+    flexShrink: 1,
+  },
+  countBadge: {
+    minWidth: 24,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#F0EFEA",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 7,
+    flexShrink: 0,
+  },
+  countBadgeText: {
     fontFamily: "NunitoSans_700Bold",
-    fontSize: 11,
-    color: "#059669",
-  },
-  menuArrow: {
-    fontFamily: "NunitoSans_400Regular",
-    fontSize: 20,
+    fontSize: 12,
     color: "#7B8579",
-    lineHeight: 22,
   },
+  destructiveLabel: { color: "#C97A7E" },
+
+  bottomPad: { height: 24 },
 });
