@@ -355,23 +355,13 @@ export default function HomeScreen() {
               onSubmitEditing={handleTextSubmit}
               placeholder={
                 searchMode === "ingredients"
-                  ? "Type ingredients (e.g. eggs, kale...)"
+                  ? "Search ingredients..."
                   : "Search for recipes..."
               }
               placeholderTextColor={C.mutedForeground}
               returnKeyType="search"
-              style={[s.input, inputFocused && s.inputFocused, { fontFamily: "NunitoSans_600SemiBold" }]}
+              style={[s.input, inputFocused && s.inputFocused, { fontFamily: "NunitoSans_600SemiBold", paddingRight: 20 }]}
             />
-            <TouchableOpacity
-              style={s.filterBtn}
-              activeOpacity={0.85}
-              onPress={searchMode === "ingredients" && ingredientInput.trim() ? handleTextSubmit : undefined}
-            >
-              {isTextLoading
-                ? <ActivityIndicator size="small" color={C.primary} />
-                : <Icon icon="solar:filter-bold-duotone" size={20} color={C.primary} />
-              }
-            </TouchableOpacity>
           </View>
         </View>
 
@@ -684,22 +674,6 @@ const s = StyleSheet.create({
     borderColor: "rgba(5,150,105,0.3)",
     backgroundColor: "#FFFFFF",
   },
-  filterBtn: {
-    position: "absolute",
-    right: 8,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-
   // ── Main centred area ──────────────────────────────────────────────────────
   main: {
     flex: 1,
