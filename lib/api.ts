@@ -1,25 +1,74 @@
 import { supabase } from "@/lib/supabase";
 import type { Ingredient, Recipe, DietFilter } from "@/types";
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Extract the actual server error message from a FunctionsHttpError. */
+async function extractFunctionError(error: unknown): Promise<string> {
+  try {
+    const context = (error as any).context;
+    if (context && typeof context.text === "function") {
+      const text: string = await context.text();
+      try {
+        const body = JSON.parse(text);
+        if (body?.error) return String(body.error);
+      } catch {
+        if (text.trim()) return text.trim();
+      }
+    }
+  } catch {}
+  return (error as any)?.message ?? String(error);
+}
+
+/**
+ * Fallback: parse a comma/semicolon/newline-separated ingredient string
+ * without calling any edge function. Used when the AI endpoint is unavailable.
+ */
+function parseIngredientsFallback(text: string): Ingredient[] {
+  return text
+    .split(/[,;\n]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 1)
+    .map((name, i) => ({
+      id: `txt-${Date.now()}-${i}`,
+      name: name.charAt(0).toUpperCase() + name.slice(1),
+      subtitle: "",
+      image: "",
+      wide: false,
+    }));
+}
+
 // ─── Extract ingredients from text ──────────────────────────────────────────
 
 export async function extractIngredientsFromText(
   rawText: string
 ): Promise<Ingredient[]> {
-  const { data, error } = await supabase.functions.invoke(
-    "extract-ingredients",
-    { body: { mode: "text", text: rawText } }
-  );
-  if (error) throw error;
-  return (data.ingredients as Array<{ name: string; subtitle: string; wide: boolean }>).map(
-    (item, i) => ({
-      id: `txt-${Date.now()}-${i}`,
-      name: item.name,
-      subtitle: item.subtitle,
-      image: "",
-      wide: item.wide ?? false,
-    })
-  );
+  try {
+    const { data, error } = await supabase.functions.invoke(
+      "extract-ingredients",
+      { body: { mode: "text", text: rawText } }
+    );
+
+    if (error) {
+      // Log server-side error detail for debugging, then fall back gracefully
+      const detail = await extractFunctionError(error);
+      console.warn("[extract-ingredients] Edge function unavailable:", detail);
+      return parseIngredientsFallback(rawText);
+    }
+
+    return (data.ingredients as Array<{ name: string; subtitle: string; wide: boolean }>).map(
+      (item, i) => ({
+        id: `txt-${Date.now()}-${i}`,
+        name: item.name,
+        subtitle: item.subtitle,
+        image: "",
+        wide: item.wide ?? false,
+      })
+    );
+  } catch {
+    // Network error or function not deployed — fall back to simple parsing
+    return parseIngredientsFallback(rawText);
+  }
 }
 
 // ─── Extract ingredients from image ─────────────────────────────────────────
@@ -32,7 +81,10 @@ export async function extractIngredientsFromImage(
     "extract-ingredients",
     { body: { mode: "image", base64Image, mimeType } }
   );
-  if (error) throw error;
+  if (error) {
+    const detail = await extractFunctionError(error);
+    throw new Error(detail);
+  }
   return (data.ingredients as Array<{ name: string; subtitle: string; wide: boolean }>).map(
     (item, i) => ({
       id: `img-${Date.now()}-${i}`,
@@ -93,6 +145,9 @@ export async function generateRecipes(
   const { data, error } = await supabase.functions.invoke("generate-recipes", {
     body: { ingredients, dietFilter, userPreferences },
   });
-  if (error) throw error;
+  if (error) {
+    const detail = await extractFunctionError(error);
+    throw new Error(detail);
+  }
   return data as { sessionId: string; recipes: Recipe[] };
 }

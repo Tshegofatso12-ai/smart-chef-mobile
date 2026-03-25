@@ -402,8 +402,8 @@ export default function IngredientTrayScreen() {
       };
       addSession(session);
       router.push("/recipe-ideas");
-    } catch (err) {
-      Alert.alert("Error", "Failed to generate recipes. Please try again.");
+    } catch (err: any) {
+      Alert.alert("Error", err?.message ?? "Failed to generate recipes. Please try again.");
     } finally {
       setIsGenerating(false);
     }

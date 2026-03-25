@@ -1,19 +1,25 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-export async function requireUser(req: Request) {
+/**
+ * Supabase's API gateway already verifies the JWT signature before the edge
+ * function runs (visible as `auth_user` in function logs). We just decode the
+ * payload to extract the user ID — no extra network round-trip needed.
+ */
+export function requireUser(req: Request): { id: string; email?: string } {
   const jwt = req.headers.get("Authorization")?.replace("Bearer ", "");
   if (!jwt) throw new Response("Unauthorized", { status: 401 });
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
+  try {
+    const [, payloadB64] = jwt.split(".");
+    // Base64url → Base64 → JSON (add padding so atob doesn't throw)
+    const base64 = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const json = atob(padded);
+    const payload = JSON.parse(json);
 
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(jwt);
+    const userId: string | undefined = payload.sub;
+    if (!userId) throw new Error("missing sub");
 
-  if (error || !user) throw new Response("Unauthorized", { status: 401 });
-  return user;
+    return { id: userId, email: payload.email };
+  } catch {
+    throw new Response("Unauthorized", { status: 401 });
+  }
 }
