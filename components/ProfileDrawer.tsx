@@ -25,10 +25,23 @@ import type { DietFilter } from "@/types";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const DRAWER_WIDTH = SCREEN_WIDTH * 0.84;
 
-const DIET_OPTIONS: { id: DietFilter; label: string; color: string }[] = [
-  { id: "low-fat",      label: "Low-Fat",      color: "#059669" },
-  { id: "low-carb",     label: "Low-Carb",     color: "#DDA77B" },
-  { id: "high-protein", label: "High-Protein", color: "#C97A7E" },
+// ─── Spacing constants ────────────────────────────────────────────────────────
+// All layout values derived from these so every section is consistent.
+const S = {
+  scrollPad:  20,  // horizontal padding on the scroll container
+  cardPad:    16,  // horizontal padding inside every card row
+  iconSize:   36,  // fixed width of the icon container column
+  iconGap:    12,  // gap between icon column and text block
+  rowV:       16,  // vertical padding inside each row
+  sectionGap: 24,  // space between sections
+  labelGap:   10,  // space between section label and its card
+};
+
+// ─── Diet options (icon added so dietary rows match the [icon][text][right] layout) ─
+const DIET_OPTIONS: { id: DietFilter; label: string; icon: "flame-outline" | "leaf-outline" | "barbell-outline" }[] = [
+  { id: "low-fat",      label: "Low-Fat",      icon: "flame-outline"   },
+  { id: "low-carb",     label: "Low-Carb",     icon: "leaf-outline"    },
+  { id: "high-protein", label: "High-Protein", icon: "barbell-outline" },
 ];
 
 type Props = { visible: boolean; onClose: () => void };
@@ -40,12 +53,12 @@ export function ProfileDrawer({ visible, onClose }: Props) {
   const translateX    = useRef(new Animated.Value(DRAWER_WIDTH)).current;
   const backdropAlpha = useRef(new Animated.Value(0)).current;
 
-  const [editingName, setEditingName] = useState(false);
-  const [displayName, setDisplayName] = useState("");
-  const [savingName,  setSavingName]  = useState(false);
+  const [editingName,   setEditingName]   = useState(false);
+  const [displayName,   setDisplayName]   = useState("");
+  const [savingName,    setSavingName]    = useState(false);
   const [selectedPrefs, setSelectedPrefs] = useState<DietFilter[]>([]);
   const [savingPrefs,   setSavingPrefs]   = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting,      setDeleting]      = useState(false);
 
   useEffect(() => {
     if (visible) {
@@ -143,7 +156,7 @@ export function ProfileDrawer({ visible, onClose }: Props) {
     setTimeout(() => router.push(path as any), 260);
   };
 
-  const initial = (profile?.display_name ?? user?.email ?? "C")[0].toUpperCase();
+  const initial      = (profile?.display_name ?? user?.email ?? "C")[0].toUpperCase();
   const totalRecipes = sessions.reduce((n, s) => n + s.recipes.length, 0);
 
   return (
@@ -155,12 +168,18 @@ export function ProfileDrawer({ visible, onClose }: Props) {
           <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         </Animated.View>
 
-        {/* Drawer */}
+        {/* ── Drawer panel ── */}
         <Animated.View style={[styles.panel, { transform: [{ translateX }] }]}>
           <SafeAreaView style={styles.safe}>
+            {/*
+             * scroll paddingHorizontal = S.scrollPad (20)
+             * Every card below stretches edge-to-edge within this padding.
+             * All rows inside cards use S.cardPad (16) so content starts at
+             * 20 + 16 = 36px from the screen edge — consistent everywhere.
+             */}
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
 
-              {/* Close button */}
+              {/* Close button — aligned to scroll left edge */}
               <Pressable
                 onPress={onClose}
                 style={({ pressed }) => [styles.closeBtn, { opacity: pressed ? 0.6 : 1 }]}
@@ -168,7 +187,7 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                 <Ionicons name="close" size={18} color="#2C332A" />
               </Pressable>
 
-              {/* ── Avatar + name ── */}
+              {/* ── Profile header ── */}
               <View style={styles.profileSection}>
                 <LinearGradient
                   colors={["#34D399", "#059669"]}
@@ -254,23 +273,39 @@ export function ProfileDrawer({ visible, onClose }: Props) {
 
               {/* ── Dietary Preferences ── */}
               <View style={styles.section}>
-                {/* Section label row: label left, saving indicator right */}
+                {/*
+                 * Label row: label left, auto-saving spinner right.
+                 * marginBottom = S.labelGap so card sits close to the label.
+                 */}
                 <View style={styles.sectionLabelRow}>
                   <Text style={styles.sectionLabel}>DIETARY PREFERENCES</Text>
                   {savingPrefs && <ActivityIndicator size="small" color="#059669" />}
                 </View>
+
                 <View style={styles.card}>
                   {DIET_OPTIONS.map((opt, i) => {
                     const isOn = selectedPrefs.includes(opt.id);
                     return (
                       <React.Fragment key={opt.id}>
-                        {i > 0 && <View style={styles.rowDivider} />}
-                        {/* Flat row: label takes flex:1, toggle sits on the right */}
+                        {i > 0 && <View style={styles.divider} />}
+
+                        {/*
+                         * Dietary row — same [icon][text][toggle] structure as
+                         * Activity and Account rows so all text aligns at the same X.
+                         *   col 1: rowIcon  — fixed S.iconSize width, centered
+                         *   col 2: rowLabel — flex:1, takes remaining space
+                         *   col 3: toggle   — fixed width, flexShrink:0
+                         */}
                         <Pressable
                           onPress={() => togglePref(opt.id)}
                           style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
                         >
+                          <View style={styles.rowIcon}>
+                            <Ionicons name={opt.icon} size={18} color="#059669" />
+                          </View>
+
                           <Text style={styles.rowLabel}>{opt.label}</Text>
+
                           <View style={[styles.toggle, isOn && styles.toggleOn]}>
                             <Animated.View style={[styles.toggleThumb, isOn && styles.toggleThumbOn]} />
                           </View>
@@ -284,9 +319,14 @@ export function ProfileDrawer({ visible, onClose }: Props) {
               {/* ── Activity ── */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>ACTIVITY</Text>
-                <View style={styles.card}>
 
-                  {/* Saved Recipes row: icon | title+subtitle | chevron */}
+                <View style={styles.card}>
+                  {/*
+                   * Activity row — [icon][body column][chevron]
+                   *   col 1: rowIcon  — fixed S.iconSize, vertically centered
+                   *   col 2: rowBody  — flex:1, stacks title + subtitle
+                   *   col 3: chevron  — fixed, flush right
+                   */}
                   <Pressable
                     onPress={() => navigate("/saved")}
                     style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
@@ -305,9 +345,8 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
 
-                  <View style={styles.rowDivider} />
+                  <View style={styles.divider} />
 
-                  {/* Recipe History row: icon | title+subtitle | chevron */}
                   <Pressable
                     onPress={() => navigate("/saved")}
                     style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
@@ -325,15 +364,19 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                     </View>
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
-
                 </View>
               </View>
 
               {/* ── Account ── */}
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>ACCOUNT</Text>
-                <View style={styles.card}>
 
+                <View style={styles.card}>
+                  {/*
+                   * Account rows reuse the same [icon][label][chevron] pattern.
+                   * rowLabel has flex:1 so the chevron always sits flush right,
+                   * regardless of label length.
+                   */}
                   <Pressable
                     onPress={handleSignOut}
                     style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
@@ -345,13 +388,14 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
 
-                  <View style={styles.rowDivider} />
+                  <View style={styles.divider} />
 
                   <Pressable
                     onPress={handleDeleteAccount}
                     disabled={deleting}
                     style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
                   >
+                    {/* Icon column: spinner replaces icon while deleting, same fixed size */}
                     <View style={styles.rowIcon}>
                       {deleting
                         ? <ActivityIndicator size="small" color="#C97A7E" />
@@ -361,7 +405,6 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                     <Text style={[styles.rowLabel, styles.destructiveLabel]}>Delete Account</Text>
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
-
                 </View>
               </View>
 
@@ -376,7 +419,7 @@ export function ProfileDrawer({ visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, flexDirection: "row", justifyContent: "flex-end" },
+  overlay:      { flex: 1, flexDirection: "row", justifyContent: "flex-end" },
   backdropFill: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(44,51,42,0.45)" },
   panel: {
     width: DRAWER_WIDTH,
@@ -388,10 +431,12 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 24,
   },
-  safe: { flex: 1 },
-  scroll: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 20 },
+  safe:   { flex: 1 },
+  // All content shares this horizontal padding — the single source of truth
+  // for the left/right edges of every card and header.
+  scroll: { paddingHorizontal: S.scrollPad, paddingTop: 8, paddingBottom: 20 },
 
-  // Close
+  // ── Close ──
   closeBtn: {
     alignSelf: "flex-start",
     width: 36,
@@ -405,7 +450,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2DFD8",
   },
 
-  // Profile header
+  // ── Profile header ──
   profileSection: { alignItems: "center", paddingBottom: 20 },
   avatar: {
     width: 76,
@@ -488,13 +533,13 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
 
-  // Stats
+  // ── Stats ──
   statsCard: {
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 18,
     paddingVertical: 22,
-    marginBottom: 24,
+    marginBottom: S.sectionGap,
     borderWidth: 1,
     borderColor: "rgba(5,150,105,0.12)",
     shadowColor: "#059669",
@@ -519,24 +564,26 @@ const styles = StyleSheet.create({
   },
   statLine: { width: 1, height: 36, backgroundColor: "rgba(5,150,105,0.15)" },
 
-  // Sections
-  section: { marginBottom: 26 },
-  // sectionLabelRow: used when a right element (e.g. spinner) sits next to the label
+  // ── Sections ──
+  section: { marginBottom: S.sectionGap },
+
+  // Used when a right element (spinner) sits next to the section label
   sectionLabelRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: S.labelGap,
   },
+  // Standalone section label (no right element)
   sectionLabel: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 11,
     color: "#7B8579",
     letterSpacing: 1.5,
-    marginBottom: 12,
+    marginBottom: S.labelGap,
   },
 
-  // Card container
+  // ── Card ──
   card: {
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
@@ -549,52 +596,54 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  // Full-width divider inset by card's horizontal padding
-  rowDivider: { height: 1, backgroundColor: "#F4F2EE", marginHorizontal: 16 },
 
-  // Universal row: [icon?] [label / body] [right element?]
-  // paddingHorizontal matches card's visual edge; all rows use this.
+  // Divider inset to match row horizontal padding so it never touches card edges
+  divider: { height: 1, backgroundColor: "#F4F2EE", marginHorizontal: S.cardPad },
+
+  // ── Universal row ──────────────────────────────────────────────────────────
+  // Every interactive row in every section uses this one style.
+  // Structure: [rowIcon 36px] [gap 12px] [rowLabel or rowBody flex:1] [right element]
+  // This guarantees all text in all sections starts at the same X position.
   row: {
     flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    alignItems: "center",          // vertical center for icon, text, and right element
+    paddingHorizontal: S.cardPad,  // 16px — matches divider inset
+    paddingVertical: S.rowV,       // 16px top and bottom
+    gap: S.iconGap,                // 12px between every column
   },
 
-  // Icon box — fixed size, never shrinks
+  // Fixed-width icon column — same size in dietary, activity, and account rows.
+  // This is what guarantees text aligns across all three sections.
   rowIcon: {
-    width: 34,
-    height: 34,
+    width: S.iconSize,             // 36px fixed — never shrinks
+    height: S.iconSize,
     borderRadius: 10,
     backgroundColor: "#F4F2EE",
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
+    flexShrink: 0,                 // never compress the icon column
   },
 
-  // Body column for rows that need title + subtitle stacked
-  rowBody: {
-    flex: 1,
-    gap: 2,
-  },
-
-  // Primary label — takes remaining space, never wraps onto icon/right element
+  // Flex text column — for rows that only need a single label (no subtitle)
   rowLabel: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 14,
     color: "#2C332A",
-    flex: 1,
+    flex: 1,                       // takes all remaining space; pushes right element flush right
   },
 
-  // Secondary subtitle under the label
+  // Flex body column — for rows that need stacked title + subtitle
+  rowBody: {
+    flex: 1,                       // same as rowLabel: pushes chevron flush right
+    gap: 3,
+  },
   rowSubtitle: {
     fontFamily: "NunitoSans_400Regular",
     fontSize: 12,
     color: "#7B8579",
   },
 
-  // Toggle switch
+  // ── Toggle ──
   toggle: {
     width: 50,
     height: 30,
@@ -602,7 +651,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E2DFD8",
     padding: 4,
     justifyContent: "center",
-    flexShrink: 0,
+    flexShrink: 0,                 // never compress the toggle
   },
   toggleOn: { backgroundColor: "#059669" },
   toggleThumb: {
