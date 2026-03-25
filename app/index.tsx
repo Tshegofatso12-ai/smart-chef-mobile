@@ -461,12 +461,9 @@ export default function HomeScreen() {
                   <Text style={styles.sectionLink}>View All</Text>
                 </Pressable>
               </View>
-              <View style={styles.listCard}>
-                {savedEntries.map(({ recipe, session }, idx) => (
-                  <React.Fragment key={recipe.id}>
-                    {idx > 0 && <View style={styles.divider} />}
-                    <RecipeRow recipe={recipe} sessionId={session.id} isSaved />
-                  </React.Fragment>
+              <View style={{ gap: 12 }}>
+                {savedEntries.map(({ recipe, session }) => (
+                  <RecipeRow key={recipe.id} recipe={recipe} sessionId={session.id} isSaved />
                 ))}
               </View>
             </View>
