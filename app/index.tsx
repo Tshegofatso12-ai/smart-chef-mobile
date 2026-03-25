@@ -41,7 +41,7 @@ import {
   extractIngredientsFromText,
   extractIngredientsFromImage,
 } from "@/lib/api";
-import type { DietFilter, Recipe } from "@/types";
+import type { DietFilter, Ingredient, Recipe } from "@/types";
 
 const COLORS = {
   background: "#F9F6F0",
@@ -98,7 +98,12 @@ export default function HomeScreen() {
   const [liveTranscript, setLiveTranscript] = useState("");
   const transcriptRef = useRef("");
 
-  // ─── Saved recipes (last 4) ────────────────────────────────────────────────
+  // ─── Recent scans: ingredients from the last session that has images ────────
+  const recentIngredients: Ingredient[] = sessions.length > 0
+    ? sessions[0].ingredients.filter((ing) => ing.image).slice(0, 5)
+    : [];
+
+  // ─── Saved recipes (last 4, shown below scans if available) ─────────────────
   const savedEntries = savedRecipeIds
     .slice(0, 4)
     .map((entry) => {
@@ -226,7 +231,10 @@ export default function HomeScreen() {
               {profile?.display_name ?? user?.email?.split("@")[0] ?? "Chef"} 👨‍🍳
             </Text>
           </View>
-          <View style={styles.avatarContainer}>
+          <Pressable
+            onPress={() => router.push("/profile")}
+            style={({ pressed }) => [styles.avatarContainer, { opacity: pressed ? 0.75 : 1 }]}
+          >
             {profile?.avatar_url ? (
               <Image
                 source={{ uri: profile.avatar_url }}
@@ -234,9 +242,18 @@ export default function HomeScreen() {
                 resizeMode="cover"
               />
             ) : (
-              <Icon icon="solar:user-bold" size={28} color="#7B8579" />
+              <LinearGradient
+                colors={["#34D399", "#059669"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatarGradient}
+              >
+                <Text style={styles.avatarInitial}>
+                  {(profile?.display_name ?? user?.email ?? "C")[0].toUpperCase()}
+                </Text>
+              </LinearGradient>
             )}
-          </View>
+          </Pressable>
         </View>
 
         {/* ── Diet Filters ── */}
@@ -404,6 +421,42 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* ── Recent Scans carousel ── */}
+          {recentIngredients.length > 0 && (
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Recent Scans</Text>
+                <Pressable onPress={() => router.push({ pathname: "/saved", params: { tab: "history" } })}>
+                  <Text style={styles.sectionLink}>View All</Text>
+                </Pressable>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.scanCarouselContent}
+              >
+                {recentIngredients.map((ing) => (
+                  <View key={ing.id} style={styles.scanCard}>
+                    {/* Ingredient photo */}
+                    <View style={styles.scanCardImageWrap}>
+                      <Image
+                        source={{ uri: ing.image }}
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="cover"
+                      />
+                      {/* Check badge */}
+                      <View style={styles.scanCardCheck}>
+                        <Icon icon="solar:check-circle-bold" size={14} color={COLORS.primary} />
+                      </View>
+                    </View>
+                    <Text style={styles.scanCardName} numberOfLines={1}>{ing.name}</Text>
+                    <Text style={styles.scanCardSub} numberOfLines={1}>{ing.subtitle}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {/* ── Saved Recipes ── */}
           {savedEntries.length > 0 && (
             <View style={styles.section}>
@@ -456,18 +509,27 @@ const styles = StyleSheet.create({
     color: "#2C332A",
   },
   avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 3,
-    borderColor: "#FFFFFF",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     overflow: "hidden",
-    backgroundColor: "#E8E6E1",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: "#059669",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  avatarGradient: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInitial: {
+    fontFamily: "NunitoSans_800ExtraBold",
+    fontSize: 18,
+    color: "#FFFFFF",
   },
   filterPill: {
     flexDirection: "row",
@@ -674,5 +736,56 @@ const styles = StyleSheet.create({
     fontFamily: "NunitoSans_700Bold",
     fontSize: 12,
     color: "#C97A7E",
+  },
+
+  // ── Recent Scans carousel ──────────────────────────────────────────────────
+  scanCarouselContent: {
+    paddingHorizontal: 24,
+    gap: 12,
+    paddingBottom: 4,
+  },
+  scanCard: {
+    width: 136,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "rgba(226,223,216,0.5)",
+    flexShrink: 0,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  scanCardImageWrap: {
+    height: 108,
+    borderRadius: 16,
+    overflow: "hidden",
+    backgroundColor: "#E8E6E1",
+    marginBottom: 10,
+    position: "relative",
+  },
+  scanCardCheck: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.85)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanCardName: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 13,
+    color: "#2C332A",
+    marginBottom: 2,
+  },
+  scanCardSub: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 11,
+    color: "#7B8579",
   },
 });

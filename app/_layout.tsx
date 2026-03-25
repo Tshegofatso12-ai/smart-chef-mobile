@@ -1,5 +1,6 @@
 import "../global.css";
 import { useEffect } from "react";
+import { View } from "react-native";
 import { Stack, router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AppProvider } from "@/context/AppContext";
@@ -32,6 +33,11 @@ function RootNavigator() {
     }
   }, [isLoading, session, profile]);
 
+  // Hold render until auth state is known to prevent flash + cascade errors
+  if (isLoading) {
+    return <View style={{ flex: 1, backgroundColor: "#F9F6F0" }} />;
+  }
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" />
@@ -39,6 +45,7 @@ function RootNavigator() {
       <Stack.Screen name="recipe-ideas" />
       <Stack.Screen name="recipe/[id]" />
       <Stack.Screen name="saved" />
+      <Stack.Screen name="profile" />
       <Stack.Screen name="onboarding" />
     </Stack>
   );

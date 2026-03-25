@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { supabase } from "@/lib/supabase";
 import { Icon } from "@/components/Icon";
 import type { CookingSkill, DietFilter } from "@/types";
@@ -18,6 +19,7 @@ type SkillDef = {
   label: string;
   desc: string;
   icon: string;
+  emoji: string;
 };
 
 const SKILLS: SkillDef[] = [
@@ -26,18 +28,21 @@ const SKILLS: SkillDef[] = [
     label: "Beginner",
     desc: "New to cooking — keep it simple and quick",
     icon: "solar:star-outline",
+    emoji: "🌱",
   },
   {
     id: "intermediate",
     label: "Intermediate",
     desc: "Comfortable with most home cooking techniques",
     icon: "solar:star-bold",
+    emoji: "🍳",
   },
   {
     id: "advanced",
     label: "Advanced",
     desc: "Experienced cook who loves complex preparations",
     icon: "solar:chef-hat-bold",
+    emoji: "👨‍🍳",
   },
 ];
 
@@ -74,7 +79,6 @@ export default function SkillScreen() {
         .eq("id", user.id);
 
       if (error) throw error;
-
       router.replace("/");
     } catch (err: any) {
       Alert.alert("Error", err?.message ?? "Could not save preferences.");
@@ -86,19 +90,21 @@ export default function SkillScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safe}>
-        {/* Progress */}
-        <View style={styles.progress}>
-          {[1, 2, 3].map((step) => (
-            <View key={step} style={styles.dotActive} />
-          ))}
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.progress}>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={[styles.dot, styles.dotActive]} />
+            ))}
+          </View>
+          <Text style={styles.step}>Step 3 of 3</Text>
+          <Text style={styles.title}>Cooking Skill</Text>
+          <Text style={styles.subtitle}>
+            We'll tailor recipe complexity to match your level.
+          </Text>
         </View>
 
-        <Text style={styles.step}>Step 3 of 3</Text>
-        <Text style={styles.title}>Cooking Skill</Text>
-        <Text style={styles.subtitle}>
-          We'll tailor recipe complexity to match your level.
-        </Text>
-
+        {/* Options */}
         <View style={styles.options}>
           {SKILLS.map((skill) => {
             const isSelected = selected === skill.id;
@@ -114,17 +120,14 @@ export default function SkillScreen() {
               >
                 <View
                   style={[
-                    styles.optionIcon,
-                    isSelected && styles.optionIconSelected,
+                    styles.optionIconBox,
+                    isSelected && styles.optionIconBoxSelected,
                   ]}
                 >
-                  <Icon
-                    icon={skill.icon}
-                    size={24}
-                    color={isSelected ? "#FFFFFF" : "#7B8579"}
-                  />
+                  <Text style={styles.optionEmoji}>{skill.emoji}</Text>
                 </View>
-                <View style={{ flex: 1 }}>
+
+                <View style={styles.optionBody}>
                   <Text
                     style={[
                       styles.optionLabel,
@@ -135,6 +138,7 @@ export default function SkillScreen() {
                   </Text>
                   <Text style={styles.optionDesc}>{skill.desc}</Text>
                 </View>
+
                 <View
                   style={[
                     styles.radio,
@@ -148,27 +152,31 @@ export default function SkillScreen() {
           })}
         </View>
 
+        {/* Footer */}
         <View style={styles.footer}>
           <Pressable
             style={({ pressed }) => [
               styles.primaryButton,
-              { opacity: pressed ? 0.85 : 1 },
+              { opacity: pressed ? 0.88 : 1 },
             ]}
             onPress={handleFinish}
             disabled={loading}
           >
-            {loading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Text style={styles.primaryButtonText}>Let's Cook!</Text>
-                <Icon
-                  icon="solar:chef-hat-bold"
-                  size={20}
-                  color="#FFFFFF"
-                />
-              </>
-            )}
+            <LinearGradient
+              colors={["#34D399", "#059669"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.primaryGradient}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <>
+                  <Text style={styles.primaryButtonText}>Let's Cook!</Text>
+                  <Icon icon="solar:chef-hat-bold" size={20} color="#FFFFFF" />
+                </>
+              )}
+            </LinearGradient>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -178,71 +186,77 @@ export default function SkillScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F9F6F0" },
-  safe: { flex: 1, paddingHorizontal: 28 },
-  progress: { flexDirection: "row", gap: 6, marginTop: 12, marginBottom: 20 },
-  dotActive: {
-    width: 28,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#059669",
-  },
+  safe: { flex: 1, paddingHorizontal: 24 },
+
+  header: { paddingTop: 12, paddingBottom: 24 },
+  progress: { flexDirection: "row", gap: 6, marginBottom: 20 },
+  dot: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "#E8E6E1" },
+  dotActive: { backgroundColor: "#059669" },
   step: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 12,
     color: "#059669",
-    marginBottom: 6,
+    letterSpacing: 1.5,
     textTransform: "uppercase",
-    letterSpacing: 1,
+    marginBottom: 8,
   },
   title: {
     fontFamily: "NunitoSans_800ExtraBold",
-    fontSize: 28,
+    fontSize: 32,
     color: "#2C332A",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   subtitle: {
     fontFamily: "NunitoSans_400Regular",
     fontSize: 14,
     color: "#7B8579",
-    marginBottom: 28,
     lineHeight: 20,
   },
-  options: { gap: 12, flex: 1, alignContent: "flex-start" },
+
+  options: { flex: 1, gap: 12 },
+
   option: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
-    padding: 20,
+    padding: 18,
     backgroundColor: "#FFFFFF",
     borderRadius: 20,
     borderWidth: 2,
     borderColor: "transparent",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   optionSelected: {
     borderColor: "#059669",
     backgroundColor: "rgba(5,150,105,0.06)",
   },
-  optionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+  optionIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 18,
     backgroundColor: "#F0EFEA",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
-  optionIconSelected: {
+  optionIconBoxSelected: {
     backgroundColor: "#059669",
+  },
+  optionEmoji: {
+    fontSize: 24,
+  },
+  optionBody: {
+    flex: 1,
+    gap: 4,
   },
   optionLabel: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 16,
     color: "#2C332A",
-    marginBottom: 3,
   },
   optionLabelSelected: {
     color: "#059669",
@@ -251,15 +265,17 @@ const styles = StyleSheet.create({
     fontFamily: "NunitoSans_400Regular",
     fontSize: 12,
     color: "#7B8579",
+    lineHeight: 16,
   },
   radio: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     borderWidth: 2,
     borderColor: "#E2DFD8",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   radioSelected: {
     borderColor: "#059669",
@@ -270,20 +286,23 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: "#059669",
   },
-  footer: { paddingBottom: 16, marginTop: 20 },
+
+  footer: { paddingTop: 12, paddingBottom: 8 },
   primaryButton: {
-    height: 56,
     borderRadius: 999,
-    backgroundColor: "#059669",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
+    overflow: "hidden",
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
     elevation: 6,
+  },
+  primaryGradient: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    height: 56,
   },
   primaryButtonText: {
     fontFamily: "NunitoSans_800ExtraBold",
