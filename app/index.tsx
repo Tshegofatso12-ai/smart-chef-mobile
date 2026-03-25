@@ -436,7 +436,12 @@ export default function HomeScreen() {
           </ScrollView>
         ) : (
           /* ── Hero (default state) ── */
-          <View style={s.main}>
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={s.main}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             {/* Magic Scan 3D button */}
             <Animated.View style={scanAnimStyle}>
               <TouchableOpacity
@@ -504,7 +509,7 @@ export default function HomeScreen() {
                 Don't feel like scanning? Just tell SmartChef what you have.
               </Text>
             </View>
-          </View>
+          </ScrollView>
         )}
 
       </SafeAreaView>
@@ -676,10 +681,11 @@ const s = StyleSheet.create({
   },
   // ── Main centred area ──────────────────────────────────────────────────────
   main: {
-    flex: 1,
+    flexGrow: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingBottom: 24,
+    paddingBottom: 100,
+    paddingTop: 16,
     gap: 28,
   },
 
