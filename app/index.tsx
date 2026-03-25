@@ -355,7 +355,7 @@ export default function HomeScreen() {
               onSubmitEditing={handleTextSubmit}
               placeholder={
                 searchMode === "ingredients"
-                  ? "Search for recipes or ingredients..."
+                  ? "Type ingredients (e.g. eggs, kale...)"
                   : "Search for recipes..."
               }
               placeholderTextColor={C.mutedForeground}
