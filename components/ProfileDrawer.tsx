@@ -254,6 +254,7 @@ export function ProfileDrawer({ visible, onClose }: Props) {
 
               {/* ── Dietary Preferences ── */}
               <View style={styles.section}>
+                {/* Section label row: label left, saving indicator right */}
                 <View style={styles.sectionLabelRow}>
                   <Text style={styles.sectionLabel}>DIETARY PREFERENCES</Text>
                   {savingPrefs && <ActivityIndicator size="small" color="#059669" />}
@@ -264,14 +265,12 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                     return (
                       <React.Fragment key={opt.id}>
                         {i > 0 && <View style={styles.rowDivider} />}
+                        {/* Flat row: label takes flex:1, toggle sits on the right */}
                         <Pressable
                           onPress={() => togglePref(opt.id)}
-                          style={({ pressed }) => [styles.prefRow, { opacity: pressed ? 0.7 : 1 }]}
+                          style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
                         >
-                          <View style={styles.prefRowLeft}>
-                            <View style={[styles.prefDot, { backgroundColor: isOn ? opt.color : "#E2DFD8" }]} />
-                            <Text style={styles.prefRowLabel}>{opt.label}</Text>
-                          </View>
+                          <Text style={styles.rowLabel}>{opt.label}</Text>
                           <View style={[styles.toggle, isOn && styles.toggleOn]}>
                             <Animated.View style={[styles.toggleThumb, isOn && styles.toggleThumbOn]} />
                           </View>
@@ -286,35 +285,47 @@ export function ProfileDrawer({ visible, onClose }: Props) {
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>ACTIVITY</Text>
                 <View style={styles.card}>
+
+                  {/* Saved Recipes row: icon | title+subtitle | chevron */}
                   <Pressable
                     onPress={() => navigate("/saved")}
-                    style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
                   >
-                    <View style={styles.menuRowIcon}>
+                    <View style={styles.rowIcon}>
                       <Ionicons name="bookmark-outline" size={18} color="#059669" />
                     </View>
-                    <Text style={styles.menuRowLabel}>Saved Recipes</Text>
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countBadgeText}>{savedRecipeIds.length}</Text>
+                    <View style={styles.rowBody}>
+                      <Text style={styles.rowLabel}>Saved Recipes</Text>
+                      <Text style={styles.rowSubtitle}>
+                        {savedRecipeIds.length > 0
+                          ? `${savedRecipeIds.length} saved`
+                          : "No saved recipes yet"}
+                      </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
 
                   <View style={styles.rowDivider} />
 
+                  {/* Recipe History row: icon | title+subtitle | chevron */}
                   <Pressable
                     onPress={() => navigate("/saved")}
-                    style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
                   >
-                    <View style={styles.menuRowIcon}>
+                    <View style={styles.rowIcon}>
                       <MaterialCommunityIcons name="history" size={18} color="#059669" />
                     </View>
-                    <Text style={styles.menuRowLabel}>Recipe History</Text>
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countBadgeText}>{sessions.length}</Text>
+                    <View style={styles.rowBody}>
+                      <Text style={styles.rowLabel}>Recipe History</Text>
+                      <Text style={styles.rowSubtitle}>
+                        {sessions.length > 0
+                          ? `${sessions.length} sessions`
+                          : "No history yet"}
+                      </Text>
                     </View>
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
+
                 </View>
               </View>
 
@@ -322,14 +333,15 @@ export function ProfileDrawer({ visible, onClose }: Props) {
               <View style={styles.section}>
                 <Text style={styles.sectionLabel}>ACCOUNT</Text>
                 <View style={styles.card}>
+
                   <Pressable
                     onPress={handleSignOut}
-                    style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
                   >
-                    <View style={styles.menuRowIcon}>
+                    <View style={styles.rowIcon}>
                       <Ionicons name="log-out-outline" size={18} color="#C97A7E" />
                     </View>
-                    <Text style={[styles.menuRowLabel, styles.signOutLabel]}>Sign Out</Text>
+                    <Text style={[styles.rowLabel, styles.destructiveLabel]}>Sign Out</Text>
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
 
@@ -338,19 +350,18 @@ export function ProfileDrawer({ visible, onClose }: Props) {
                   <Pressable
                     onPress={handleDeleteAccount}
                     disabled={deleting}
-                    style={({ pressed }) => [styles.menuRow, { opacity: pressed ? 0.7 : 1 }]}
+                    style={({ pressed }) => [styles.row, { opacity: pressed ? 0.7 : 1 }]}
                   >
-                    {deleting
-                      ? <ActivityIndicator size="small" color="#C97A7E" style={styles.menuRowIcon} />
-                      : (
-                        <View style={styles.menuRowIcon}>
-                          <Ionicons name="trash-outline" size={18} color="#C97A7E" />
-                        </View>
-                      )
-                    }
-                    <Text style={[styles.menuRowLabel, styles.destructiveLabel]}>Delete Account</Text>
+                    <View style={styles.rowIcon}>
+                      {deleting
+                        ? <ActivityIndicator size="small" color="#C97A7E" />
+                        : <Ionicons name="trash-outline" size={18} color="#C97A7E" />
+                      }
+                    </View>
+                    <Text style={[styles.rowLabel, styles.destructiveLabel]}>Delete Account</Text>
                     <Ionicons name="chevron-forward" size={16} color="#B0ADA6" />
                   </Pressable>
+
                 </View>
               </View>
 
@@ -394,7 +405,7 @@ const styles = StyleSheet.create({
     borderColor: "#E2DFD8",
   },
 
-  // Profile
+  // Profile header
   profileSection: { alignItems: "center", paddingBottom: 20 },
   avatar: {
     width: 76,
@@ -510,6 +521,7 @@ const styles = StyleSheet.create({
 
   // Sections
   section: { marginBottom: 26 },
+  // sectionLabelRow: used when a right element (e.g. spinner) sits next to the label
   sectionLabelRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -537,23 +549,52 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 2,
   },
-  rowDivider: { height: 1, backgroundColor: "#F4F2EE", marginLeft: 62 },
+  // Full-width divider inset by card's horizontal padding
+  rowDivider: { height: 1, backgroundColor: "#F4F2EE", marginHorizontal: 16 },
 
-  // Preference row
-  prefRow: {
+  // Universal row: [icon?] [label / body] [right element?]
+  // paddingHorizontal matches card's visual edge; all rows use this.
+  row: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 14,
+    gap: 12,
   },
-  prefRowLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  prefDot: { width: 10, height: 10, borderRadius: 5 },
-  prefRowLabel: {
+
+  // Icon box — fixed size, never shrinks
+  rowIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: "#F4F2EE",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+
+  // Body column for rows that need title + subtitle stacked
+  rowBody: {
+    flex: 1,
+    gap: 2,
+  },
+
+  // Primary label — takes remaining space, never wraps onto icon/right element
+  rowLabel: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 14,
     color: "#2C332A",
+    flex: 1,
   },
+
+  // Secondary subtitle under the label
+  rowSubtitle: {
+    fontFamily: "NunitoSans_400Regular",
+    fontSize: 12,
+    color: "#7B8579",
+  },
+
+  // Toggle switch
   toggle: {
     width: 50,
     height: 30,
@@ -561,6 +602,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#E2DFD8",
     padding: 4,
     justifyContent: "center",
+    flexShrink: 0,
   },
   toggleOn: { backgroundColor: "#059669" },
   toggleThumb: {
@@ -577,46 +619,6 @@ const styles = StyleSheet.create({
   },
   toggleThumbOn: { alignSelf: "flex-end" },
 
-  // Menu row
-  menuRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
-  },
-  menuRowIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: "#F4F2EE",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  menuRowLabel: {
-    fontFamily: "NunitoSans_600SemiBold",
-    fontSize: 14,
-    color: "#2C332A",
-    flexGrow: 1,
-    flexShrink: 1,
-  },
-  countBadge: {
-    minWidth: 24,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#F0EFEA",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 7,
-    flexShrink: 0,
-  },
-  countBadgeText: {
-    fontFamily: "NunitoSans_700Bold",
-    fontSize: 12,
-    color: "#7B8579",
-  },
-  signOutLabel: { color: "#C97A7E" },
   destructiveLabel: { color: "#C97A7E" },
 
   bottomPad: { height: 24 },
