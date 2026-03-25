@@ -48,6 +48,13 @@ const ICON_MAP: Record<string, IconMapping> = {
   "solar:fire-bold-duotone":         { set: "Ionicons", name: "flame" },
   "solar:leaf-bold-duotone":         { set: "Ionicons", name: "leaf" },
   "solar:play-bold-duotone":         { set: "Ionicons", name: "play" },
+  // my recipes screen
+  "solar:history-linear":            { set: "MaterialCommunityIcons", name: "history" },
+  "solar:add-circle-bold":           { set: "Ionicons", name: "add-circle" },
+  "solar:home-2-bold-duotone":       { set: "Ionicons", name: "home" },
+  "solar:magnifer-bold-duotone":     { set: "Ionicons", name: "search" },
+  "solar:chef-hat-bold-duotone":     { set: "MaterialCommunityIcons", name: "chef-hat" },
+  "solar:user-bold-duotone":         { set: "Ionicons", name: "person" },
 };
 
 export function Icon({ icon, size = 20, color = "#000" }: IconProps) {
