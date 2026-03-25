@@ -3,7 +3,7 @@ import {
   View,
   Text,
   ScrollView,
-  Pressable,
+  TouchableOpacity,
   StyleSheet,
   TextInput,
   Alert,
@@ -19,14 +19,14 @@ import { useAuthContext } from "@/context/AuthContext";
 import { useAppContext } from "@/context/AppContext";
 import type { DietFilter } from "@/types";
 
-// ─── Design tokens (from HTML :root) ─────────────────────────────────────────
+// ─── Design tokens ────────────────────────────────────────────────────────────
 const C = {
   bg:          "#F8F7F2",
   fg:          "#433935",
   primary:     "#10B981",
   primaryFg:   "#FFFFFF",
-  secondary:   "#E2E8F0",   // bg-secondary
-  secondaryFg: "#64748B",   // text-secondary-foreground
+  secondary:   "#E2E8F0",
+  secondaryFg: "#64748B",
   card:        "#FFFFFF",
   muted:       "#E8E6E1",
   mutedFg:     "#7B8579",
@@ -36,14 +36,13 @@ const C = {
   destructive: "#C97A7E",
 };
 
-// ─── Diet options with per-option inactive icon color ────────────────────────
-// Matches the HTML: leaf (no special = fg), bone (text-chart-3), fire (text-chart-2)
 type DietDef = {
   id: DietFilter;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   inactiveColor: string;
 };
+
 const DIET_OPTIONS: DietDef[] = [
   { id: "low-fat",  label: "Low-Fat",  icon: "leaf-outline",      inactiveColor: C.primary     },
   { id: "low-carb", label: "Low-Carb", icon: "nutrition-outline", inactiveColor: C.chart3      },
@@ -151,35 +150,27 @@ export default function ProfileScreen() {
     <View style={s.root}>
       <SafeAreaView style={s.safe}>
 
-        {/* ── Header: back button · title · spacer (same width as button) ── */}
+        {/* ── Header ── */}
         <View style={s.header}>
-          <Pressable
-            onPress={() => router.back()}
-            style={({ pressed }) => [s.headerBtn, { transform: [{ scale: pressed ? 0.95 : 1 }] }]}
-          >
+          <TouchableOpacity onPress={() => router.back()} activeOpacity={0.7} style={s.headerBtn}>
             <Ionicons name="chevron-back" size={20} color={C.fg} />
-          </Pressable>
+          </TouchableOpacity>
           <Text style={s.headerTitle}>My Profile</Text>
           <View style={s.headerSpacer} />
         </View>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
 
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* AVATAR SECTION                                                  */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* ══════════════════════════════════════════════════════════ */}
+          {/* AVATAR SECTION                                             */}
+          {/* ══════════════════════════════════════════════════════════ */}
           <View style={s.avatarSection}>
 
-            {/*
-             * Ring structure (outer → inner):
-             *   ringWrap  — rgba(16,185,129,0.1) border  ← ring-4 ring-primary/10
-             *   avatar    — white border                  ← border-4 border-card
-             *   gradient  — gradient or photo fill
-             */}
+            {/* Avatar with ring */}
             <View style={s.avatarWrap}>
-              {/* ring-4 ring-primary/10 */}
+              {/* Outer ring: rgba(16,185,129,0.1) border */}
               <View style={s.avatarRing}>
-                {/* border-4 border-card */}
+                {/* White border */}
                 <View style={s.avatarBorder}>
                   <LinearGradient
                     colors={["#34D399", "#10B981"]}
@@ -195,16 +186,17 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              {/* Edit badge — absolute bottom-4 right-0 */}
-              <Pressable
+              {/* Edit badge — absolute bottom-right */}
+              <TouchableOpacity
                 onPress={() => Alert.alert("Coming Soon", "Avatar upload will be available in the next update.")}
-                style={({ pressed }) => [s.editBadge, { transform: [{ scale: pressed ? 0.9 : 1 }] }]}
+                activeOpacity={0.8}
+                style={s.editBadge}
               >
                 <Ionicons name="pencil" size={13} color={C.primaryFg} />
-              </Pressable>
+              </TouchableOpacity>
             </View>
 
-            {/* Name — inline edit on tap of "Edit Account Info" button */}
+            {/* Name */}
             {editingName ? (
               <View style={s.nameEditRow}>
                 <TextInput
@@ -217,16 +209,17 @@ export default function ProfileScreen() {
                   placeholder="Display name"
                   placeholderTextColor={C.mutedFg}
                 />
-                <Pressable
+                <TouchableOpacity
                   onPress={saveName}
                   disabled={savingName}
-                  style={({ pressed }) => [s.nameSaveBtn, { opacity: pressed ? 0.8 : 1 }]}
+                  activeOpacity={0.8}
+                  style={s.nameSaveBtn}
                 >
                   {savingName
                     ? <ActivityIndicator size="small" color={C.primary} />
                     : <Text style={s.nameSaveBtnText}>Save</Text>
                   }
-                </Pressable>
+                </TouchableOpacity>
               </View>
             ) : (
               <Text style={s.profileName} numberOfLines={1}>
@@ -236,27 +229,21 @@ export default function ProfileScreen() {
 
             <Text style={s.profileEmail} numberOfLines={1}>{user?.email}</Text>
 
-            {/*
-             * bg-secondary = #E2E8F0   text-secondary-foreground = #64748B
-             * Matches HTML: mt-4 px-6 py-2 rounded-full bg-secondary border border-border/30
-             */}
-            <Pressable
+            {/* Edit Account Info pill button */}
+            <TouchableOpacity
               onPress={() => setEditingName(true)}
-              style={({ pressed }) => [
-                s.editInfoBtn,
-                { transform: [{ scale: pressed ? 0.95 : 1 }] },
-              ]}
+              activeOpacity={0.8}
+              style={s.editInfoBtn}
             >
-              <Ionicons name="person-outline" size={18} color={C.secondaryFg} />
+              <Ionicons name="person-outline" size={16} color={C.secondaryFg} />
               <Text style={s.editInfoBtnText}>Edit Account Info</Text>
-            </Pressable>
+            </TouchableOpacity>
           </View>
 
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* DIETARY PREFERENCES                                             */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* ══════════════════════════════════════════════════════════ */}
+          {/* DIETARY PREFERENCES                                        */}
+          {/* ══════════════════════════════════════════════════════════ */}
           <View style={s.section}>
-            {/* Section header row */}
             <View style={s.sectionHeader}>
               <Text style={s.sectionTitle}>Dietary Preferences</Text>
               {savingPrefs
@@ -265,53 +252,54 @@ export default function ProfileScreen() {
               }
             </View>
 
-            {/*
-             * grid grid-cols-2 gap-3  →  2-column flexWrap row, gap 12
-             * Each button: flex items-center gap-3 p-3 rounded-2xl
-             * Active:   bg-primary text-primary-foreground border border-white/10
-             * Inactive: bg-card text-foreground border border-border/50
-             * Icon color on inactive is per-option (fg, chart-3, chart-2)
-             */}
+            {/* 2×2 grid — explicit rows to avoid percentage-width issues */}
             <View style={s.prefsGrid}>
-              {DIET_OPTIONS.map((opt) => {
-                const isOn = selectedPrefs.includes(opt.id);
-                return (
-                  <Pressable
-                    key={opt.id}
-                    onPress={() => togglePref(opt.id)}
-                    style={({ pressed }) => [
-                      s.prefBtn,
-                      isOn ? s.prefBtnOn : s.prefBtnOff,
-                      { transform: [{ scale: pressed ? 0.95 : 1 }] },
-                    ]}
-                  >
-                    <Ionicons
-                      name={opt.icon}
-                      size={20}
-                      color={isOn ? C.primaryFg : opt.inactiveColor}
-                    />
-                    <Text style={[s.prefLabel, isOn && s.prefLabelOn]}>
-                      {opt.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              <View style={s.prefsRow}>
+                {DIET_OPTIONS.slice(0, 2).map((opt) => {
+                  const isOn = selectedPrefs.includes(opt.id);
+                  return (
+                    <TouchableOpacity
+                      key={opt.id}
+                      onPress={() => togglePref(opt.id)}
+                      activeOpacity={0.8}
+                      style={[s.prefBtn, isOn ? s.prefBtnOn : s.prefBtnOff]}
+                    >
+                      <Ionicons name={opt.icon} size={20} color={isOn ? C.primaryFg : opt.inactiveColor} />
+                      <Text style={[s.prefLabel, isOn && s.prefLabelOn]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <View style={s.prefsRow}>
+                {DIET_OPTIONS.slice(2, 4).map((opt) => {
+                  const isOn = selectedPrefs.includes(opt.id);
+                  return (
+                    <TouchableOpacity
+                      key={opt.id}
+                      onPress={() => togglePref(opt.id)}
+                      activeOpacity={0.8}
+                      style={[s.prefBtn, isOn ? s.prefBtnOn : s.prefBtnOff]}
+                    >
+                      <Ionicons name={opt.icon} size={20} color={isOn ? C.primaryFg : opt.inactiveColor} />
+                      <Text style={[s.prefLabel, isOn && s.prefLabelOn]}>{opt.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
           </View>
 
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* RECIPE SUMMARY                                                  */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* ══════════════════════════════════════════════════════════ */}
+          {/* RECIPE SUMMARY                                             */}
+          {/* ══════════════════════════════════════════════════════════ */}
           <View style={s.section}>
             <Text style={[s.sectionTitle, { marginBottom: 16 }]}>Recipe Summary</Text>
 
-            {/* rounded-[2rem] border border-border/50 overflow-hidden shadow-sm */}
             <View style={s.card}>
-
-              {/* Saved Recipes row — border-b border-border/30 */}
-              <Pressable
+              <TouchableOpacity
                 onPress={() => router.push("/saved")}
-                style={({ pressed }) => [s.cardRow, pressed && s.cardRowPressed]}
+                activeOpacity={0.7}
+                style={s.cardRow}
               >
                 <View style={[s.cardIcon, { backgroundColor: "rgba(16,185,129,0.1)" }]}>
                   <Ionicons name="bookmark-outline" size={20} color={C.primary} />
@@ -325,14 +313,14 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.mutedFg} />
-              </Pressable>
+              </TouchableOpacity>
 
               <View style={s.rowDivider} />
 
-              {/* Recipe History row */}
-              <Pressable
+              <TouchableOpacity
                 onPress={() => router.push({ pathname: "/saved", params: { tab: "history" } })}
-                style={({ pressed }) => [s.cardRow, pressed && s.cardRowPressed]}
+                activeOpacity={0.7}
+                style={s.cardRow}
               >
                 <View style={[s.cardIcon, { backgroundColor: "rgba(133,156,169,0.1)" }]}>
                   <Ionicons name="time-outline" size={20} color={C.chart4} />
@@ -346,39 +334,34 @@ export default function ProfileScreen() {
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={18} color={C.mutedFg} />
-              </Pressable>
-
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* ═══════════════════════════════════════════════════════════════ */}
-          {/* ACCOUNT (Sign Out + Delete Account) — mb-12                    */}
-          {/* ═══════════════════════════════════════════════════════════════ */}
+          {/* ══════════════════════════════════════════════════════════ */}
+          {/* ACCOUNT                                                    */}
+          {/* ══════════════════════════════════════════════════════════ */}
           <View style={[s.section, s.lastSection]}>
             <View style={s.card}>
-
-              {/* Sign Out — border-b border-border/30 */}
-              <Pressable
+              <TouchableOpacity
                 onPress={handleSignOut}
-                style={({ pressed }) => [s.cardRow, pressed && s.cardRowPressed]}
+                activeOpacity={0.7}
+                style={s.cardRow}
               >
                 <View style={[s.cardIcon, { backgroundColor: C.muted }]}>
                   <Ionicons name="log-out-outline" size={20} color={`${C.fg}B3`} />
                 </View>
-                <Text style={[s.cardRowTitle, { flex: 1 }]}>Sign Out</Text>
+                <Text style={[s.cardRowTitle, s.cardRowFlex]}>Sign Out</Text>
                 <Ionicons name="chevron-forward" size={18} color={C.mutedFg} />
-              </Pressable>
+              </TouchableOpacity>
 
               <View style={s.rowDivider} />
 
-              {/* Delete Account — hover:bg-destructive/5 */}
-              <Pressable
+              <TouchableOpacity
                 onPress={handleDeleteAccount}
                 disabled={deleting}
-                style={({ pressed }) => [
-                  s.cardRow,
-                  pressed && { backgroundColor: "rgba(201,122,126,0.1)" },
-                ]}
+                activeOpacity={0.7}
+                style={s.cardRow}
               >
                 <View style={[s.cardIcon, { backgroundColor: "rgba(201,122,126,0.1)" }]}>
                   {deleting
@@ -386,12 +369,11 @@ export default function ProfileScreen() {
                     : <Ionicons name="trash-outline" size={20} color={C.destructive} />
                   }
                 </View>
-                <Text style={[s.cardRowTitle, { flex: 1, color: C.destructive }]}>
+                <Text style={[s.cardRowTitle, s.cardRowFlex, { color: C.destructive }]}>
                   Delete Account
                 </Text>
                 <Ionicons name="chevron-forward" size={18} color={C.mutedFg} />
-              </Pressable>
-
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -406,7 +388,6 @@ const s = StyleSheet.create({
   safe: { flex: 1 },
 
   // ── Header ──────────────────────────────────────────────────────────────────
-  // px-6 pt-12 pb-6 flex items-center justify-between
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -415,11 +396,10 @@ const s = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 24,
   },
-  // h-10 w-10 rounded-full bg-card border border-border/50 shadow-sm
   headerBtn: {
     width: 40,
     height: 40,
-    borderRadius: 999,
+    borderRadius: 20,
     backgroundColor: C.card,
     borderWidth: 1,
     borderColor: "rgba(226,232,240,0.5)",
@@ -431,7 +411,6 @@ const s = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  // text-xl font-heading font-extrabold
   headerTitle: {
     fontFamily: "NunitoSans_800ExtraBold",
     fontSize: 20,
@@ -441,41 +420,47 @@ const s = StyleSheet.create({
 
   scroll: { paddingBottom: 48 },
 
-  // ── Avatar section ───────────────────────────────────────────────────────────
-  // px-6 mb-8 flex flex-col items-center
+  // ── Avatar section ──────────────────────────────────────────────────────────
   avatarSection: {
     alignItems: "center",
     paddingHorizontal: 24,
-    paddingBottom: 32,  // mb-8
+    paddingBottom: 32,
   },
   avatarWrap: {
-    position: "relative",
     marginBottom: 16,
+    width: 136,
+    height: 136,
+    alignItems: "center",
+    justifyContent: "center",
   },
-
-  // ring-4 ring-primary/10 → border 4px rgba(16,185,129,0.1), rounded-full
   avatarRing: {
+    width: 136,
+    height: 136,
+    borderRadius: 68,
     borderWidth: 4,
-    borderColor: "rgba(16,185,129,0.1)",
-    borderRadius: 999,
+    borderColor: "rgba(16,185,129,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 6,
   },
-  // border-4 border-card → white border between ring and gradient
   avatarBorder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     borderWidth: 4,
     borderColor: C.card,
-    borderRadius: 999,
     overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  // h-28 w-28 rounded-full — the gradient circle itself
   avatarGradient: {
     width: 112,
     height: 112,
-    borderRadius: 999,
+    borderRadius: 56,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -484,12 +469,10 @@ const s = StyleSheet.create({
     fontSize: 40,
     color: "#FFFFFF",
   },
-
-  // absolute bottom-4 right-0 h-8 w-8 rounded-full bg-primary border-2 border-card
   editBadge: {
     position: "absolute",
-    bottom: 8,
-    right: 0,
+    bottom: 4,
+    right: 4,
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -505,19 +488,17 @@ const s = StyleSheet.create({
     elevation: 3,
   },
 
-  // text-2xl font-heading font-extrabold
   profileName: {
     fontFamily: "NunitoSans_800ExtraBold",
     fontSize: 24,
     color: C.fg,
     marginBottom: 4,
   },
-  // text-sm font-medium text-muted-foreground
   profileEmail: {
     fontFamily: "NunitoSans_600SemiBold",
     fontSize: 14,
     color: C.mutedFg,
-    marginBottom: 16,  // mt-4 on the button below
+    marginBottom: 16,
   },
 
   nameEditRow: {
@@ -554,22 +535,16 @@ const s = StyleSheet.create({
     color: C.primary,
   },
 
-  // mt-4 px-6 py-2 rounded-full bg-secondary text-secondary-foreground border border-border/30 shadow-sm
   editInfoBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
     paddingHorizontal: 24,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 999,
     backgroundColor: C.secondary,
     borderWidth: 1,
-    borderColor: "rgba(226,232,240,0.3)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    borderColor: "rgba(226,232,240,0.5)",
   },
   editInfoBtnText: {
     fontFamily: "NunitoSans_700Bold",
@@ -578,29 +553,24 @@ const s = StyleSheet.create({
   },
 
   // ── Sections ─────────────────────────────────────────────────────────────────
-  // px-6 mb-8
   section: {
     paddingHorizontal: 24,
     marginBottom: 32,
   },
   lastSection: {
-    marginBottom: 48,  // mb-12
+    marginBottom: 48,
   },
-  // flex items-center justify-between mb-4
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 16,
   },
-  // text-lg font-heading font-bold (700, not extrabold)
   sectionTitle: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 18,
     color: C.fg,
   },
-
-  // small green filled dot — section header indicator
   sectionDot: {
     width: 10,
     height: 10,
@@ -608,37 +578,36 @@ const s = StyleSheet.create({
     backgroundColor: C.primary,
   },
 
-  // ── Dietary prefs grid ────────────────────────────────────────────────────────
-  // grid grid-cols-2 gap-3 → 2-col flexWrap, gap 12
+  // ── Dietary grid ──────────────────────────────────────────────────────────────
   prefsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     gap: 12,
   },
-  // flex items-center gap-3 p-3 rounded-2xl — each takes ~(50% - gap/2)
+  prefsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
   prefBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    padding: 12,
-    borderRadius: 16,       // rounded-2xl
+    gap: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    width: "47%",           // 2-column grid approximation
   },
-  // bg-primary text-primary-foreground border border-white/10 shadow-sm
   prefBtnOn: {
     backgroundColor: C.primary,
-    borderColor: "rgba(255,255,255,0.1)",
+    borderColor: "rgba(255,255,255,0.2)",
     shadowColor: C.primary,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 4,
     elevation: 3,
   },
-  // bg-card text-foreground border border-border/50 shadow-sm
   prefBtnOff: {
     backgroundColor: C.card,
-    borderColor: "rgba(226,232,240,0.5)",
+    borderColor: "rgba(226,232,240,0.6)",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -649,14 +618,14 @@ const s = StyleSheet.create({
     fontFamily: "NunitoSans_700Bold",
     fontSize: 14,
     color: C.fg,
+    flexShrink: 1,
   },
   prefLabelOn: { color: C.primaryFg },
 
-  // ── Card (Recipe Summary + Account) ─────────────────────────────────────────
-  // bg-card rounded-[2rem] border border-border/50 overflow-hidden shadow-sm
+  // ── Cards ─────────────────────────────────────────────────────────────────────
   card: {
     backgroundColor: C.card,
-    borderRadius: 32,         // rounded-[2rem]
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: "rgba(226,232,240,0.5)",
     overflow: "hidden",
@@ -666,44 +635,36 @@ const s = StyleSheet.create({
     shadowRadius: 4,
     elevation: 2,
   },
-  // w-full px-6 py-5 flex items-center justify-between
   cardRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 24,    // px-6
-    paddingVertical: 20,      // py-5
-    gap: 16,                  // gap-4
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    gap: 14,
   },
-  // active:bg-muted/50 → slight tint on press
-  cardRowPressed: {
-    backgroundColor: "rgba(232,230,225,0.5)",
-  },
-  // h-10 w-10 rounded-xl
   cardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,         // rounded-xl
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   cardBody: { flex: 1 },
-  // font-bold
+  cardRowFlex: { flex: 1 },
   cardRowTitle: {
     fontFamily: "NunitoSans_700Bold",
     fontSize: 15,
     color: C.fg,
     marginBottom: 2,
   },
-  // text-xs text-muted-foreground
   cardRowSub: {
     fontFamily: "NunitoSans_400Regular",
     fontSize: 12,
     color: C.mutedFg,
   },
-  // border-b border-border/30
   rowDivider: {
     height: 1,
-    backgroundColor: "rgba(226,232,240,0.3)",
+    backgroundColor: "rgba(226,232,240,0.4)",
   },
 });
