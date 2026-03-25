@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import { router, useLocalSearchParams } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
 import { useAppContext } from "@/context/AppContext";
-import { fetchFoodImage } from "@/lib/pexels";
 
 const COLORS = {
   background: "#F9F6F0",
@@ -30,7 +29,6 @@ export default function RecipeCardScreen() {
   const { id, sessionId } = useLocalSearchParams<{ id: string; sessionId: string }>();
   const { activeSession, sessions, toggleSaved, isRecipeSaved } = useAppContext();
   const [currentStep, setCurrentStep] = useState<number | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const insets = useSafeAreaInsets();
@@ -60,12 +58,7 @@ export default function RecipeCardScreen() {
     );
   }
 
-  useEffect(() => {
-    fetchFoodImage(recipe.title).then((url) => {
-      if (url) setImageUrl(url);
-      else setImageError(true);
-    });
-  }, [recipe.title]);
+  const imageUrl = recipe.imageUrl ?? null;
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.background }}>

@@ -23,12 +23,13 @@ import { Icon } from "@/components/Icon";
 import { Shimmer } from "@/components/Shimmer";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useAppContext } from "@/context/AppContext";
+import { useAuthContext } from "@/context/AuthContext";
 import {
   generateRecipes,
   extractIngredientsFromText,
   extractIngredientsFromImage,
   applyIngredientFix,
-} from "@/lib/claude";
+} from "@/lib/api";
 import type { Ingredient, RecipeSession } from "@/types";
 
 // expo-speech-recognition guard (requires native build)
@@ -146,6 +147,7 @@ function ShimmerRow({ isLast }: { isLast: boolean }) {
 
 export default function IngredientTrayScreen() {
   const { trayIngredients, activeDietFilter, addSession, scannedImageUri, setScannedImageUri } = useAppContext();
+  const { profile } = useAuthContext();
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     trayIngredients.length > 0 ? trayIngredients : INITIAL_INGREDIENTS
   );
@@ -379,9 +381,20 @@ export default function IngredientTrayScreen() {
 
     setIsGenerating(true);
     try {
-      const recipes = await generateRecipes(ingredients, activeDietFilter);
+      const userPreferences = profile
+        ? {
+            dietary_preferences: profile.dietary_preferences,
+            allergies: profile.allergies,
+            cooking_skill: profile.cooking_skill,
+          }
+        : undefined;
+      const { sessionId, recipes } = await generateRecipes(
+        ingredients,
+        activeDietFilter,
+        userPreferences
+      );
       const session: RecipeSession = {
-        id: `session-${Date.now()}`,
+        id: sessionId,
         createdAt: Date.now(),
         ingredients,
         dietFilter: activeDietFilter,

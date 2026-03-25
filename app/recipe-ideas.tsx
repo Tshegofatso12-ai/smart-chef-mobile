@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
 import { Shimmer } from "@/components/Shimmer";
 import { useAppContext } from "@/context/AppContext";
-import { fetchFoodImage } from "@/lib/pexels";
 import type { Recipe } from "@/types";
 
 const COLORS = {
@@ -34,17 +33,10 @@ function RecipeIdeaCard({
   recipe: Recipe;
   sessionId: string;
 }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   const { isRecipeSaved, toggleSaved } = useAppContext();
-
-  useEffect(() => {
-    fetchFoodImage(recipe.title).then((url) => {
-      if (url) setImageUrl(url);
-      else setImageError(true);
-    });
-  }, [recipe.title]);
+  const imageUrl = recipe.imageUrl ?? null;
 
   return (
     <Pressable

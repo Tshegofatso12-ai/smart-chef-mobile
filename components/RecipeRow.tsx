@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, Text, Image, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Icon } from "@/components/Icon";
 import { Shimmer } from "@/components/Shimmer";
-import { fetchFoodImage } from "@/lib/pexels";
 import type { Recipe } from "@/types";
 
 export function RecipeRow({
@@ -16,16 +15,9 @@ export function RecipeRow({
   sessionId: string;
   isSaved?: boolean;
 }) {
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-
-  useEffect(() => {
-    fetchFoodImage(recipe.title).then((url) => {
-      if (url) setImageUrl(url);
-      else setImageError(true);
-    });
-  }, [recipe.title]);
+  const imageUrl = recipe.imageUrl ?? null;
 
   return (
     <Pressable
