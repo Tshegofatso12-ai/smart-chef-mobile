@@ -9,8 +9,10 @@ export function requireUser(req: Request): { id: string; email?: string } {
 
   try {
     const [, payloadB64] = jwt.split(".");
-    // Base64url → Base64 → JSON
-    const json = atob(payloadB64.replace(/-/g, "+").replace(/_/g, "/"));
+    // Base64url → Base64 → JSON (add padding so atob doesn't throw)
+    const base64 = payloadB64.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const json = atob(padded);
     const payload = JSON.parse(json);
 
     const userId: string | undefined = payload.sub;
