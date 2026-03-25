@@ -248,9 +248,16 @@ export default function HomeScreen() {
                 resizeMode="cover"
               />
             ) : (
-              <Text style={styles.avatarInitial}>
-                {(profile?.display_name ?? user?.email ?? "C")[0].toUpperCase()}
-              </Text>
+              <LinearGradient
+                colors={["#34D399", "#059669"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatarGradient}
+              >
+                <Text style={styles.avatarInitial}>
+                  {(profile?.display_name ?? user?.email ?? "C")[0].toUpperCase()}
+                </Text>
+              </LinearGradient>
             )}
           </Pressable>
         </View>
@@ -476,14 +483,17 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     overflow: "hidden",
-    backgroundColor: "#059669",
-    alignItems: "center",
-    justifyContent: "center",
     shadowColor: "#059669",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  avatarGradient: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarInitial: {
     fontFamily: "NunitoSans_800ExtraBold",
