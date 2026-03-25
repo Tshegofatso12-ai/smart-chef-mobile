@@ -45,9 +45,10 @@ type DietDef = {
   inactiveColor: string;
 };
 const DIET_OPTIONS: DietDef[] = [
-  { id: "low-fat",      label: "Low-Fat",      icon: "leaf-outline",      inactiveColor: C.fg       },
-  { id: "low-carb",     label: "Low-Carb",     icon: "nutrition-outline", inactiveColor: C.chart3   },
-  { id: "high-protein", label: "High-Protein", icon: "flame-outline",     inactiveColor: C.destructive },
+  { id: "low-fat",  label: "Low-Fat",  icon: "leaf-outline",      inactiveColor: C.primary     },
+  { id: "low-carb", label: "Low-Carb", icon: "nutrition-outline", inactiveColor: C.chart3      },
+  { id: "keto",     label: "Keto",     icon: "flame-outline",     inactiveColor: C.destructive },
+  { id: "vegan",    label: "Vegan",    icon: "heart-outline",     inactiveColor: "#E896B0"     },
 ];
 
 export default function ProfileScreen() {
@@ -260,7 +261,7 @@ export default function ProfileScreen() {
               <Text style={s.sectionTitle}>Dietary Preferences</Text>
               {savingPrefs
                 ? <ActivityIndicator size="small" color={C.primary} />
-                : <Ionicons name="settings-outline" size={20} color={C.primary} />
+                : <View style={s.sectionDot} />
               }
             </View>
 
@@ -597,6 +598,14 @@ const s = StyleSheet.create({
     fontFamily: "NunitoSans_700Bold",
     fontSize: 18,
     color: C.fg,
+  },
+
+  // small green filled dot — section header indicator
+  sectionDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: C.primary,
   },
 
   // ── Dietary prefs grid ────────────────────────────────────────────────────────

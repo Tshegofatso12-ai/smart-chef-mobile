@@ -1,4 +1,4 @@
-export type DietFilter = "low-fat" | "low-carb" | "high-protein";
+export type DietFilter = "low-fat" | "low-carb" | "high-protein" | "keto" | "vegan";
 
 export type Ingredient = {
   id: string;
