@@ -81,7 +81,18 @@ export default function HomeScreen() {
     savedRecipeIds,
     sessions,
   } = useAppContext();
-  const { profile, user } = useAuthContext();
+  const { profile, user, signOut } = useAuthContext();
+
+  const handleAvatarPress = () => {
+    Alert.alert(
+      profile?.display_name ?? user?.email?.split("@")[0] ?? "Account",
+      user?.email,
+      [
+        { text: "Sign Out", style: "destructive", onPress: () => signOut() },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
 
   // ─── Magic Scan spring animation ─────────────────────────────────────────
   const scanScale = useSharedValue(1);
@@ -226,7 +237,10 @@ export default function HomeScreen() {
               {profile?.display_name ?? user?.email?.split("@")[0] ?? "Chef"} 👨‍🍳
             </Text>
           </View>
-          <View style={styles.avatarContainer}>
+          <Pressable
+            onPress={handleAvatarPress}
+            style={({ pressed }) => [styles.avatarContainer, { opacity: pressed ? 0.8 : 1 }]}
+          >
             {profile?.avatar_url ? (
               <Image
                 source={{ uri: profile.avatar_url }}
@@ -236,7 +250,7 @@ export default function HomeScreen() {
             ) : (
               <Icon icon="solar:user-bold" size={28} color="#7B8579" />
             )}
-          </View>
+          </Pressable>
         </View>
 
         {/* ── Diet Filters ── */}
