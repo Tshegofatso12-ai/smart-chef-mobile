@@ -3,7 +3,7 @@ import {
   View,
   Text,
   ScrollView,
-  Pressable,
+  TouchableOpacity,
   StyleSheet,
   Image,
 } from "react-native";
@@ -51,9 +51,9 @@ export default function RecipeCardScreen() {
         <Icon icon="solar:chef-hat-bold" size={48} color={COLORS.mutedForeground} />
         <Text style={styles.notFoundTitle}>Recipe not found</Text>
         <Text style={styles.notFoundSubtext}>This recipe may no longer be available.</Text>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>Go Back</Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -91,18 +91,12 @@ export default function RecipeCardScreen() {
 
           {/* Nav */}
           <View style={[styles.heroNav, { top: insets.top + 12 }]}>
-            <Pressable
-              onPress={() => router.back()}
-              style={({ pressed }) => [styles.heroButton, { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
-            >
+            <TouchableOpacity onPress={() => router.back()} style={styles.heroButton} activeOpacity={0.7}>
               <Icon icon="solar:alt-arrow-left-linear" size={22} color="#FFFFFF" />
-            </Pressable>
-            <Pressable
-              onPress={handleFavoriteToggle}
-              style={({ pressed }) => [styles.heroButton, { opacity: pressed ? 0.7 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] }]}
-            >
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleFavoriteToggle} style={styles.heroButton} activeOpacity={0.7}>
               <Icon icon={isSaved ? "solar:bookmark-bold" : "solar:bookmark-outline"} size={22} color="#FFFFFF" />
-            </Pressable>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -175,10 +169,11 @@ export default function RecipeCardScreen() {
               const stepNumber = index + 1;
               const isActive = currentStep === stepNumber;
               return (
-                <Pressable
+                <TouchableOpacity
                   key={stepNumber}
                   onPress={() => setCurrentStep((prev) => prev === stepNumber ? null : stepNumber)}
                   style={[styles.stepRow, isActive && styles.stepRowActive]}
+                  activeOpacity={0.8}
                 >
                   <View style={[styles.stepBadge, isActive && styles.stepBadgeActive]}>
                     <Text style={[styles.stepNumber, isActive && { color: COLORS.primary }]}>
@@ -186,7 +181,7 @@ export default function RecipeCardScreen() {
                     </Text>
                   </View>
                   <Text style={[styles.stepText, isActive && { color: COLORS.foreground }]}>{step}</Text>
-                </Pressable>
+                </TouchableOpacity>
               );
             })}
           </View>
@@ -194,21 +189,15 @@ export default function RecipeCardScreen() {
 
         {/* ── CTAs ── */}
         <View style={{ marginTop: 8, paddingHorizontal: 24, gap: 12 }}>
-          <Pressable
-            onPress={handleFavoriteToggle}
-            style={({ pressed }) => [styles.saveButton, { opacity: pressed ? 0.9 : 1 }]}
-          >
+          <TouchableOpacity onPress={handleFavoriteToggle} style={styles.saveButton} activeOpacity={0.9}>
             <Icon icon={isSaved ? "solar:bookmark-bold" : "solar:bookmark-outline"} size={20} color={COLORS.primary} />
             <Text style={styles.saveButtonText}>{isSaved ? "Saved to My Recipes" : "Save Recipe"}</Text>
-          </Pressable>
+          </TouchableOpacity>
 
-          <Pressable
-            onPress={() => setCurrentStep(1)}
-            style={({ pressed }) => [styles.ctaButton, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
-          >
+          <TouchableOpacity onPress={() => setCurrentStep(1)} style={styles.ctaButton} activeOpacity={0.9}>
             <Icon icon="solar:play-circle-bold" size={24} color={COLORS.background} />
             <Text style={styles.ctaButtonText}>Start Step-by-Step</Text>
-          </Pressable>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
