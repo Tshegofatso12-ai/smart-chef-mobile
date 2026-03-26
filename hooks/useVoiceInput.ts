@@ -1,25 +1,22 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Alert } from "react-native";
 
-// expo-speech-recognition requires a native build — guard for Expo Go
+// expo-speech-recognition requires a native build — guard for Expo Go.
+// We only grab the module reference; event subscriptions are registered
+// inside useEffect (not at the hook call site) to avoid crashes.
 let _module: any = null;
-let _useSpeechRecognitionEvent: (event: string, cb: (e: any) => void) => void =
-  () => {};
 try {
   const m = require("expo-speech-recognition");
-  _module = m.ExpoSpeechRecognitionModule ?? null;
-  // Only use the real hook if the native module is actually available.
-  // In Expo Go, the JS module loads but the native side is null — calling
-  // useSpeechRecognitionEvent with a null native module crashes on render.
-  if (_module) {
-    _useSpeechRecognitionEvent = m.useSpeechRecognitionEvent;
+  const mod = m.ExpoSpeechRecognitionModule;
+  // Verify the native module is actually present (not just the JS shim)
+  if (mod && typeof mod.start === "function") {
+    _module = mod;
   }
 } catch {
-  // Module not bundled at all — voice input disabled
+  // Module not bundled — Expo Go or unsupported platform
 }
 
 // Module-level owner token: only one hook instance may hold an active session.
-// Set to a stable sessionId string when listening starts; cleared on end/error.
 const _activeSessionId = { current: null as string | null };
 
 let _nextId = 0;
@@ -51,8 +48,8 @@ export interface UseVoiceInputReturn {
 export function useVoiceInput(
   options: UseVoiceInputOptions
 ): UseVoiceInputReturn {
-  // Store callbacks in refs so the event handlers always see the latest version
-  // without requiring callers to memoize with useCallback.
+  // Store callbacks in refs so event handlers always see the latest values
+  // without requiring callers to wrap in useCallback.
   const onResultRef = useRef(options.onResult);
   onResultRef.current = options.onResult;
   const onInterimResultRef = useRef(options.onInterimResult);
@@ -60,15 +57,16 @@ export function useVoiceInput(
   const onErrorRef = useRef(options.onError);
   onErrorRef.current = options.onError;
 
-  // Stable session ID for this hook instance (never changes after mount).
-  const sessionId = useRef(`voice-${_nextId++}`).current;
+  // Stable ID for this hook instance — set once on mount, never changes.
+  const sessionIdRef = useRef(`voice-${_nextId++}`);
+  const sessionId = sessionIdRef.current;
 
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const transcriptRef = useRef("");
 
-  const handleError = (kind: VoiceInputErrorKind) => {
+  const fireError = useRef((kind: VoiceInputErrorKind) => {
     if (onErrorRef.current) {
       onErrorRef.current(kind);
     } else {
@@ -80,62 +78,71 @@ export function useVoiceInput(
       };
       Alert.alert("Voice Input", messages[kind]);
     }
-  };
+  }).current;
 
-  _useSpeechRecognitionEvent("result", (e: any) => {
-    if (_activeSessionId.current !== sessionId) return;
-    const t = e.results[0]?.transcript ?? "";
-    transcriptRef.current = t;
-    onInterimResultRef.current?.(t);
-    setLiveTranscript(t);
-  });
+  // Register native event listeners once on mount via useEffect.
+  // This avoids calling useSpeechRecognitionEvent (a hook) inside another
+  // hook body, which caused crashes in Expo Go.
+  useEffect(() => {
+    if (!_module) return;
 
-  _useSpeechRecognitionEvent("end", async () => {
-    if (_activeSessionId.current !== sessionId) return;
-    _activeSessionId.current = null;
-    setIsListening(false);
-    setLiveTranscript("");
-    const transcript = transcriptRef.current;
-    transcriptRef.current = "";
-    if (!transcript) {
-      handleError("no_speech");
-      return;
-    }
-    setIsProcessing(true);
-    try {
-      await onResultRef.current(transcript);
-    } finally {
-      setIsProcessing(false);
-    }
-  });
+    const resultSub = _module.addListener("result", (e: any) => {
+      if (_activeSessionId.current !== sessionId) return;
+      const t = e.results?.[0]?.transcript ?? "";
+      transcriptRef.current = t;
+      onInterimResultRef.current?.(t);
+      setLiveTranscript(t);
+    });
 
-  _useSpeechRecognitionEvent("error", () => {
-    if (_activeSessionId.current !== sessionId) return;
-    _activeSessionId.current = null;
-    setIsListening(false);
-    setLiveTranscript("");
-    transcriptRef.current = "";
-    handleError("error");
-  });
+    const endSub = _module.addListener("end", async () => {
+      if (_activeSessionId.current !== sessionId) return;
+      _activeSessionId.current = null;
+      setIsListening(false);
+      setLiveTranscript("");
+      const transcript = transcriptRef.current;
+      transcriptRef.current = "";
+      if (!transcript) {
+        fireError("no_speech");
+        return;
+      }
+      setIsProcessing(true);
+      try {
+        await onResultRef.current(transcript);
+      } finally {
+        setIsProcessing(false);
+      }
+    });
+
+    const errorSub = _module.addListener("error", () => {
+      if (_activeSessionId.current !== sessionId) return;
+      _activeSessionId.current = null;
+      setIsListening(false);
+      setLiveTranscript("");
+      transcriptRef.current = "";
+      fireError("error");
+    });
+
+    return () => {
+      resultSub?.remove();
+      endSub?.remove();
+      errorSub?.remove();
+    };
+  }, [sessionId, fireError]);
 
   const toggleListening = async () => {
     if (!_module) {
-      handleError("unavailable");
+      fireError("unavailable");
       return;
     }
-
-    // Stop if this instance is currently listening
     if (isListening) {
       _module.stop();
       return;
     }
-
-    // Another instance owns the session — don't start
     if (_activeSessionId.current !== null) return;
 
     const { granted } = await _module.requestPermissionsAsync();
     if (!granted) {
-      handleError("permission_denied");
+      fireError("permission_denied");
       return;
     }
 
