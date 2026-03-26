@@ -7,10 +7,15 @@ let _useSpeechRecognitionEvent: (event: string, cb: (e: any) => void) => void =
   () => {};
 try {
   const m = require("expo-speech-recognition");
-  _module = m.ExpoSpeechRecognitionModule;
-  _useSpeechRecognitionEvent = m.useSpeechRecognitionEvent;
+  _module = m.ExpoSpeechRecognitionModule ?? null;
+  // Only use the real hook if the native module is actually available.
+  // In Expo Go, the JS module loads but the native side is null — calling
+  // useSpeechRecognitionEvent with a null native module crashes on render.
+  if (_module) {
+    _useSpeechRecognitionEvent = m.useSpeechRecognitionEvent;
+  }
 } catch {
-  // running in Expo Go — voice input disabled
+  // Module not bundled at all — voice input disabled
 }
 
 // Module-level owner token: only one hook instance may hold an active session.
