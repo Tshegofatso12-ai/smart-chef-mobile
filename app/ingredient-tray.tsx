@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -30,18 +30,8 @@ import {
   extractIngredientsFromImage,
   applyIngredientFix,
 } from "@/lib/api";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import type { Ingredient, RecipeSession } from "@/types";
-
-// expo-speech-recognition guard (requires native build)
-let ExpoSpeechRecognitionModule: any = null;
-let useSpeechRecognitionEvent: (event: string, cb: (e: any) => void) => void = () => {};
-try {
-  const speechMod = require("expo-speech-recognition");
-  ExpoSpeechRecognitionModule = speechMod.ExpoSpeechRecognitionModule;
-  useSpeechRecognitionEvent = speechMod.useSpeechRecognitionEvent;
-} catch {
-  // Expo Go — voice disabled
-}
 
 const COLORS = {
   background: "#F9F6F0",
@@ -169,23 +159,15 @@ export default function IngredientTrayScreen() {
   const [textInput, setTextInput] = useState("");
   const [isAddingText, setIsAddingText] = useState(false);
   const [isAddingScan, setIsAddingScan] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isVoiceLoading, setIsVoiceLoading] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
-  const transcriptRef = useRef("");
   const slideAnim = useRef(new Animated.Value(0)).current;
 
   // ─── Fix Issue sheet state ───────────────────────────────────────────────
   const [fixSheetVisible, setFixSheetVisible] = useState(false);
   const [fixInput, setFixInput] = useState("");
   const [isFixing, setIsFixing] = useState(false);
-  const [isFixListening, setIsFixListening] = useState(false);
-  const [isFixVoiceLoading, setIsFixVoiceLoading] = useState(false);
   const [liveFixTranscript, setLiveFixTranscript] = useState("");
-  const fixTranscriptRef = useRef("");
   const fixSlideAnim = useRef(new Animated.Value(0)).current;
-  // tracks which flow owns the current voice session
-  const voicePurposeRef = useRef<"add" | "fix">("add");
 
   const openSheet = () => {
     setSheetMode("menu");
@@ -215,6 +197,33 @@ export default function IngredientTrayScreen() {
     });
   };
 
+  // ─── Voice input (two independent flows) ────────────────────────────────
+  const addVoice = useVoiceInput({
+    onResult: async (transcript) => {
+      const items = await extractIngredientsFromText(transcript);
+      mergeIngredients(items);
+      closeSheet();
+    },
+    onInterimResult: (partial) => setLiveTranscript(partial),
+    onError: (kind) => {
+      if (kind === "unavailable") Alert.alert("Voice Input", "Voice requires a native build. Run `npx expo run:ios`.");
+      else if (kind === "permission_denied") Alert.alert("Permission Denied", "Microphone access is required.");
+      else if (kind !== "no_speech") Alert.alert("Voice Error", "Speech recognition failed. Please try again.");
+    },
+  });
+
+  const fixVoice = useVoiceInput({
+    onResult: async (transcript) => {
+      await handleApplyFix(transcript);
+    },
+    onInterimResult: (partial) => setLiveFixTranscript(partial),
+    onError: (kind) => {
+      if (kind === "unavailable") Alert.alert("Voice Input", "Voice requires a native build. Run `npx expo run:ios`.");
+      else if (kind === "permission_denied") Alert.alert("Permission Denied", "Microphone access is required.");
+      else if (kind !== "no_speech") Alert.alert("Voice Error", "Speech recognition failed. Please try again.");
+    },
+  });
+
   const handleApplyFix = async (instruction: string) => {
     if (!instruction.trim()) return;
     setIsFixing(true);
@@ -229,78 +238,9 @@ export default function IngredientTrayScreen() {
     }
   };
 
-  const handleFixVoice = async () => {
-    if (!ExpoSpeechRecognitionModule) {
-      Alert.alert("Voice Input", "Voice requires a native build. Run `npx expo run:ios`.");
-      return;
-    }
-    if (isFixListening) { ExpoSpeechRecognitionModule.stop(); return; }
-    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!granted) { Alert.alert("Permission Denied", "Microphone access is required."); return; }
-    voicePurposeRef.current = "fix";
-    fixTranscriptRef.current = "";
-    setIsFixListening(true);
-    ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: false, maxAlternatives: 1 });
-  };
-
   const mergeIngredients = (newItems: Ingredient[]) => {
     setIngredients((prev) => [...prev, ...newItems]);
   };
-
-  // Voice events (shared — voicePurposeRef tracks which flow owns the session)
-  useSpeechRecognitionEvent("result", (e) => {
-    const t = e.results[0]?.transcript ?? "";
-    if (voicePurposeRef.current === "fix") {
-      fixTranscriptRef.current = t;
-      setLiveFixTranscript(t);
-    } else {
-      transcriptRef.current = t;
-      setLiveTranscript(t);
-    }
-  });
-
-  useSpeechRecognitionEvent("end", async () => {
-    if (voicePurposeRef.current === "fix") {
-      setIsFixListening(false);
-      setLiveFixTranscript("");
-      const transcript = fixTranscriptRef.current;
-      fixTranscriptRef.current = "";
-      if (!transcript) return;
-      setIsFixVoiceLoading(true);
-      try {
-        await handleApplyFix(transcript);
-      } finally {
-        setIsFixVoiceLoading(false);
-      }
-    } else {
-      setIsListening(false);
-      setLiveTranscript("");
-      const transcript = transcriptRef.current;
-      transcriptRef.current = "";
-      if (!transcript) return;
-      setIsVoiceLoading(true);
-      try {
-        const items = await extractIngredientsFromText(transcript);
-        mergeIngredients(items);
-        closeSheet();
-      } catch {
-        Alert.alert("Error", "Could not extract ingredients from voice.");
-      } finally {
-        setIsVoiceLoading(false);
-      }
-    }
-  });
-
-  useSpeechRecognitionEvent("error", () => {
-    if (voicePurposeRef.current === "fix") {
-      setIsFixListening(false);
-      setLiveFixTranscript("");
-    } else {
-      setIsListening(false);
-      setLiveTranscript("");
-    }
-    Alert.alert("Voice Error", "Speech recognition failed. Please try again.");
-  });
 
   const handleAddText = async () => {
     const text = textInput.trim();
@@ -353,20 +293,6 @@ export default function IngredientTrayScreen() {
     } finally {
       setIsAddingScan(false);
     }
-  };
-
-  const handleAddVoice = async () => {
-    if (!ExpoSpeechRecognitionModule) {
-      Alert.alert("Voice Input", "Voice requires a native build. Run `npx expo run:ios`.");
-      return;
-    }
-    if (isListening) { ExpoSpeechRecognitionModule.stop(); return; }
-    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!granted) { Alert.alert("Permission Denied", "Microphone access is required."); return; }
-    voicePurposeRef.current = "add";
-    transcriptRef.current = "";
-    setIsListening(true);
-    ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: false, maxAlternatives: 1 });
   };
 
   const removeIngredient = (id: string) => {
@@ -571,26 +497,26 @@ export default function IngredientTrayScreen() {
               </Pressable>
 
               <Pressable
-                onPress={handleAddVoice}
-                style={[styles.sheetTile, isListening && styles.sheetTileActive]}
+                onPress={addVoice.toggleListening}
+                style={[styles.sheetTile, addVoice.isListening && styles.sheetTileActive]}
               >
-                {isVoiceLoading ? (
+                {addVoice.isProcessing ? (
                   <ActivityIndicator color={COLORS.primary} />
                 ) : (
                   <Icon
-                    icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
+                    icon={addVoice.isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
                     size={28}
-                    color={isListening ? COLORS.primaryForeground : COLORS.primary}
+                    color={addVoice.isListening ? COLORS.primaryForeground : COLORS.primary}
                   />
                 )}
-                <Text style={[styles.sheetTileLabel, isListening && { color: COLORS.primaryForeground }]}>
-                  {isListening ? "Listening…" : "Voice"}
+                <Text style={[styles.sheetTileLabel, addVoice.isListening && { color: COLORS.primaryForeground }]}>
+                  {addVoice.isListening ? "Listening…" : "Voice"}
                 </Text>
               </Pressable>
             </View>
 
             {/* Live transcript */}
-            {isListening && liveTranscript ? (
+            {addVoice.isListening && liveTranscript ? (
               <Text style={styles.sheetTranscript} numberOfLines={2}>{liveTranscript}</Text>
             ) : null}
 
@@ -677,25 +603,25 @@ export default function IngredientTrayScreen() {
 
             <View style={styles.fixVoiceRow}>
               <Pressable
-                onPress={handleFixVoice}
-                style={[styles.fixVoiceBtn, isFixListening && styles.sheetTileActive]}
+                onPress={fixVoice.toggleListening}
+                style={[styles.fixVoiceBtn, fixVoice.isListening && styles.sheetTileActive]}
               >
-                {isFixVoiceLoading ? (
-                  <ActivityIndicator color={isFixListening ? "#fff" : COLORS.primary} />
+                {fixVoice.isProcessing ? (
+                  <ActivityIndicator color={fixVoice.isListening ? "#fff" : COLORS.primary} />
                 ) : (
                   <Icon
-                    icon={isFixListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
+                    icon={fixVoice.isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
                     size={20}
-                    color={isFixListening ? COLORS.primaryForeground : COLORS.primary}
+                    color={fixVoice.isListening ? COLORS.primaryForeground : COLORS.primary}
                   />
                 )}
-                <Text style={[styles.sheetTileLabel, isFixListening && { color: COLORS.primaryForeground }]}>
-                  {isFixListening ? "Listening…" : "Use Voice"}
+                <Text style={[styles.sheetTileLabel, fixVoice.isListening && { color: COLORS.primaryForeground }]}>
+                  {fixVoice.isListening ? "Listening…" : "Use Voice"}
                 </Text>
               </Pressable>
             </View>
 
-            {isFixListening && liveFixTranscript ? (
+            {fixVoice.isListening && liveFixTranscript ? (
               <Text style={styles.sheetTranscript} numberOfLines={2}>{liveFixTranscript}</Text>
             ) : null}
 

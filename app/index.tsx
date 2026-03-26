@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   View,
   Text,
@@ -21,17 +21,6 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 
-// expo-speech-recognition requires a native build — guard for Expo Go
-let ExpoSpeechRecognitionModule: any = null;
-let useSpeechRecognitionEvent: (event: string, cb: (e: any) => void) => void = () => {};
-try {
-  const speechMod = require("expo-speech-recognition");
-  ExpoSpeechRecognitionModule = speechMod.ExpoSpeechRecognitionModule;
-  useSpeechRecognitionEvent = speechMod.useSpeechRecognitionEvent;
-} catch {
-  // running in Expo Go — voice input disabled
-}
-
 import { Icon } from "@/components/Icon";
 import { LoadingOverlay } from "@/components/LoadingOverlay";
 import { useAppContext } from "@/context/AppContext";
@@ -41,6 +30,7 @@ import {
   extractIngredientsFromImage,
   searchRecipeByQuery,
 } from "@/lib/api";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
 import type { DietFilter, Recipe, RecipeSession } from "@/types";
 
 const C = {
@@ -97,11 +87,27 @@ export default function HomeScreen() {
   const [inputFocused, setInputFocused] = useState(false);
   const [isTextLoading, setIsTextLoading] = useState(false);
   const [isScanLoading, setIsScanLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
-  const [isVoiceLoading, setIsVoiceLoading] = useState(false);
   const [isAiSearchLoading, setIsAiSearchLoading] = useState(false);
 
   // ─── Recipe search results ────────────────────────────────────────────────
+  const voice = useVoiceInput({
+    onResult: async (transcript) => {
+      const ingredients = await extractIngredientsFromText(transcript);
+      setTrayIngredients(ingredients);
+      setScannedImageUri(null);
+      router.push("/ingredient-tray");
+    },
+    onError: (kind) => {
+      if (kind === "unavailable") {
+        Alert.alert("Voice Input", "Voice input requires a native build. Run `npx expo run:ios` to enable it.");
+      } else if (kind === "permission_denied") {
+        Alert.alert("Permission Denied", "Microphone access is required for voice input.");
+      } else if (kind !== "no_speech") {
+        Alert.alert("Voice Error", "Speech recognition failed. Please try again.");
+      }
+    },
+  });
+
   const recipeResults = useMemo<{ recipe: Recipe; session: RecipeSession }[]>(() => {
     if (searchMode !== "recipes" || !ingredientInput.trim()) return [];
     const q = ingredientInput.trim().toLowerCase();
@@ -118,37 +124,6 @@ export default function HomeScreen() {
     }
     return results;
   }, [searchMode, ingredientInput, sessions]);
-  const transcriptRef = useRef("");
-
-  // ─── Speech recognition events ────────────────────────────────────────────
-  useSpeechRecognitionEvent("result", (event) => {
-    const t = event.results[0]?.transcript ?? "";
-    transcriptRef.current = t;
-  });
-
-  useSpeechRecognitionEvent("end", async () => {
-    setIsListening(false);
-    const transcript = transcriptRef.current;
-    transcriptRef.current = "";
-    if (!transcript) return;
-    setIsVoiceLoading(true);
-    try {
-      const ingredients = await extractIngredientsFromText(transcript);
-      setTrayIngredients(ingredients);
-      setScannedImageUri(null);
-      router.push("/ingredient-tray");
-    } catch {
-      Alert.alert("Error", "Could not extract ingredients from voice. Please try again.");
-    } finally {
-      setIsVoiceLoading(false);
-    }
-  });
-
-  useSpeechRecognitionEvent("error", () => {
-    setIsListening(false);
-    Alert.alert("Voice Error", "Speech recognition failed. Please try again.");
-  });
-
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleAiSearch = async (query: string) => {
     setIsAiSearchLoading(true);
@@ -233,19 +208,6 @@ export default function HomeScreen() {
     } finally {
       setIsScanLoading(false);
     }
-  };
-
-  const handleVoice = async () => {
-    if (!ExpoSpeechRecognitionModule) {
-      Alert.alert("Voice Input", "Voice input requires a native build. Run `npx expo run:ios` to enable it.");
-      return;
-    }
-    if (isListening) { ExpoSpeechRecognitionModule.stop(); return; }
-    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-    if (!granted) { Alert.alert("Permission Denied", "Microphone access is required for voice input."); return; }
-    transcriptRef.current = "";
-    setIsListening(true);
-    ExpoSpeechRecognitionModule.start({ lang: "en-US", interimResults: false, maxAlternatives: 1 });
   };
 
   return (
@@ -488,21 +450,21 @@ export default function HomeScreen() {
             {/* Voice button */}
             <View style={s.voiceWrap}>
               <TouchableOpacity
-                onPress={handleVoice}
-                style={[s.voiceBtn, isListening && s.voiceBtnActive]}
+                onPress={voice.toggleListening}
+                style={[s.voiceBtn, voice.isListening && s.voiceBtnActive]}
                 activeOpacity={0.85}
               >
-                {isVoiceLoading ? (
+                {voice.isProcessing ? (
                   <ActivityIndicator size="small" color={C.primary} />
                 ) : (
                   <Icon
-                    icon={isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
+                    icon={voice.isListening ? "solar:soundwave-bold" : "solar:microphone-3-bold"}
                     size={24}
-                    color={isListening ? C.primaryForeground : C.primary}
+                    color={voice.isListening ? C.primaryForeground : C.primary}
                   />
                 )}
-                <Text style={[s.voiceBtnText, isListening && { color: C.primaryForeground }]}>
-                  {isListening ? "Listening…" : isVoiceLoading ? "Processing…" : "Speak Your Ingredients"}
+                <Text style={[s.voiceBtnText, voice.isListening && { color: C.primaryForeground }]}>
+                  {voice.isListening ? "Listening…" : voice.isProcessing ? "Processing…" : "Speak Your Ingredients"}
                 </Text>
               </TouchableOpacity>
               <Text style={s.voiceTagline}>
@@ -535,10 +497,10 @@ export default function HomeScreen() {
       </View>
 
       <LoadingOverlay
-        visible={isScanLoading || isVoiceLoading || isAiSearchLoading}
+        visible={isScanLoading || voice.isProcessing || isAiSearchLoading}
         message={
           isScanLoading ? "Scanning ingredients..." :
-          isVoiceLoading ? "Processing voice..." :
+          voice.isProcessing ? "Processing voice..." :
           "Generating recipe…"
         }
       />
