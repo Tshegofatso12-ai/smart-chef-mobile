@@ -14,6 +14,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { supabase } from "@/lib/supabase";
 import { useAuthContext } from "@/context/AuthContext";
 import { useAppContext } from "@/context/AppContext";
@@ -54,12 +55,13 @@ export default function ProfileScreen() {
   const { user, profile, signOut, refreshProfile } = useAuthContext();
   const { sessions, savedRecipeIds } = useAppContext();
 
-  const [editingName,   setEditingName]   = useState(false);
-  const [displayName,   setDisplayName]   = useState("");
-  const [savingName,    setSavingName]    = useState(false);
-  const [selectedPrefs, setSelectedPrefs] = useState<DietFilter[]>([]);
-  const [savingPrefs,   setSavingPrefs]   = useState(false);
-  const [deleting,      setDeleting]      = useState(false);
+  const [editingName,    setEditingName]    = useState(false);
+  const [displayName,    setDisplayName]    = useState("");
+  const [savingName,     setSavingName]     = useState(false);
+  const [selectedPrefs,  setSelectedPrefs]  = useState<DietFilter[]>([]);
+  const [savingPrefs,    setSavingPrefs]    = useState(false);
+  const [deleting,       setDeleting]       = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   useEffect(() => {
     setDisplayName(profile?.display_name ?? "");
@@ -100,6 +102,87 @@ export default function ProfileScreen() {
     } finally {
       setSavingPrefs(false);
     }
+  };
+
+  const uploadAvatar = async (source: "camera" | "library") => {
+    let result;
+    if (source === "camera") {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Camera access is required to take a photo.");
+        return;
+      }
+      result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+        base64: true,
+        mediaTypes: ["images"],
+      });
+    } else {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission Denied", "Photo library access is required.");
+        return;
+      }
+      result = await ImagePicker.launchImageLibraryAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+        base64: true,
+        mediaTypes: ["images"],
+      });
+    }
+
+    if (result.canceled || !result.assets[0]?.base64) return;
+
+    const asset = result.assets[0];
+    const ext = asset.mimeType === "image/png" ? "png" : "jpg";
+    const mimeType = asset.mimeType === "image/png" ? "image/png" : "image/jpeg";
+
+    setUploadingAvatar(true);
+    try {
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) return;
+
+      // Convert base64 to Uint8Array for upload
+      const binary = atob(asset.base64!);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+
+      const filePath = `${u.id}/avatar.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(filePath, bytes, { contentType: mimeType, upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(filePath);
+
+      // Bust cache by appending a timestamp
+      const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+      await supabase.from("profiles").update({
+        avatar_url: avatarUrl,
+        updated_at: new Date().toISOString(),
+      }).eq("id", u.id);
+
+      await refreshProfile();
+    } catch (err: any) {
+      Alert.alert("Upload Failed", err?.message ?? "Could not upload photo. Please try again.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarPress = () => {
+    Alert.alert("Profile Photo", "Choose a source", [
+      { text: "Take Photo", onPress: () => uploadAvatar("camera") },
+      { text: "Choose from Library", onPress: () => uploadAvatar("library") },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const handleSignOut = () => {
@@ -182,13 +265,19 @@ export default function ProfileScreen() {
                       ? <Image source={{ uri: profile.avatar_url }} style={StyleSheet.absoluteFill} resizeMode="cover" />
                       : <Text style={s.avatarInitial}>{initial}</Text>
                     }
+                    {uploadingAvatar && (
+                      <View style={s.avatarUploadOverlay}>
+                        <ActivityIndicator color="#fff" />
+                      </View>
+                    )}
                   </LinearGradient>
                 </View>
               </View>
 
               {/* Edit badge — absolute bottom-right */}
               <TouchableOpacity
-                onPress={() => Alert.alert("Coming Soon", "Avatar upload will be available in the next update.")}
+                onPress={handleAvatarPress}
+                disabled={uploadingAvatar}
                 activeOpacity={0.8}
                 style={s.editBadge}
               >
@@ -468,6 +557,13 @@ const s = StyleSheet.create({
     fontFamily: "NunitoSans_800ExtraBold",
     fontSize: 40,
     color: "#FFFFFF",
+  },
+  avatarUploadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    borderRadius: 56,
+    alignItems: "center",
+    justifyContent: "center",
   },
   editBadge: {
     position: "absolute",
