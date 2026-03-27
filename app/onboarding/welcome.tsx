@@ -42,7 +42,7 @@ export default function WelcomeScreen() {
         <View style={s.copySection}>
           <Text style={s.headline}>
             {"Cook Smarter with "}
-            <Text style={s.headlinePrimary}>Magic Scan</Text>
+            <Text style={s.headlinePrimary}>Smart Chef</Text>
           </Text>
           <Text style={s.subtitle}>
             Transform your ingredients into gourmet recipes using AI vision.
