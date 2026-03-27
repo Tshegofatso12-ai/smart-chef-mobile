@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
+  Share,
   StyleSheet,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -59,6 +60,23 @@ export default function RecipeCardScreen() {
     toggleSaved(recipe.id, session.id);
   };
 
+  const handleShare = async () => {
+    if (!recipe) return;
+    const ingredientLines = recipe.ingredients
+      .map((i) => `  • ${i}`)
+      .join("\n");
+    const stepLines = recipe.steps
+      .map((step, idx) => `  ${idx + 1}. ${step}`)
+      .join("\n");
+    const message =
+      `🍽️ ${recipe.title}\n` +
+      `⏱ ${recipe.cookTime}  |  🔥 ${recipe.calories} cal  |  🌿 ${recipe.dietMatch.replace(/-/g, " ")}\n\n` +
+      `Ingredients:\n${ingredientLines}\n\n` +
+      `Steps:\n${stepLines}\n\n` +
+      `Made with Smart Chef 👨‍🍳`;
+    await Share.share({ message, title: recipe.title });
+  };
+
   if (!recipe) {
     return (
       <View style={{ flex: 1, backgroundColor: C.bg, alignItems: "center", justifyContent: "center", padding: 32 }}>
@@ -91,7 +109,7 @@ export default function RecipeCardScreen() {
             />
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => Alert.alert("Share", "Sharing coming soon.")}
+            onPress={handleShare}
             style={s.headerBtn}
             activeOpacity={0.7}
           >
