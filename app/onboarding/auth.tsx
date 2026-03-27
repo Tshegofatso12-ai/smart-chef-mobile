@@ -113,6 +113,13 @@ export default function AuthScreen() {
       const result = await WebBrowser.openAuthSessionAsync(data.url, "smart-chef://");
       if (result.type !== "success") return;
 
+      // If the redirect landed on localhost the Google provider isn't configured in Supabase yet
+      if (result.url.includes("localhost")) {
+        throw new Error(
+          "Google sign-in is not configured yet. Enable the Google provider in your Supabase Dashboard under Authentication → Providers."
+        );
+      }
+
       // Parse access_token and refresh_token from the redirect hash
       const hash = result.url.split("#")[1] ?? result.url.split("?")[1] ?? "";
       const params = Object.fromEntries(
