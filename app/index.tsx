@@ -52,7 +52,7 @@ type FilterDef = { id: DietFilter; label: string; icon: string; activeColor: str
 
 const DIET_FILTERS: FilterDef[] = [
   { id: "low-fat",  label: "Low-Fat",  icon: "solar:leaf-bold",      activeColor: C.primary     },
-  { id: "low-carb", label: "Low-Carb", icon: "solar:nutrition-bold", activeColor: C.chart3      },
+  { id: "low-carb", label: "Low-Carb", icon: "solar:bone-bold",      activeColor: C.chart3      },
   { id: "keto",     label: "Keto",     icon: "solar:fire-bold",      activeColor: C.chart2      },
   { id: "vegan",    label: "Vegan",    icon: "solar:heart-bold",     activeColor: "#E896B0"     },
 ];
