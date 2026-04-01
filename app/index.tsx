@@ -31,6 +31,7 @@ import {
   searchRecipeByQuery,
 } from "@/lib/api";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { supabase } from "@/lib/supabase";
 import type { DietFilter, Recipe, RecipeSession } from "@/types";
 
 const C = {
@@ -65,8 +66,6 @@ function getGreeting(): string {
 
 export default function HomeScreen() {
   const {
-    activeDietFilter,
-    setActiveDietFilter,
     setTrayIngredients,
     setScannedImageUri,
     sessions,
@@ -74,8 +73,9 @@ export default function HomeScreen() {
     toggleSaved,
     addSession,
   } = useAppContext();
-  const { profile, user } = useAuthContext();
+  const { profile, user, refreshProfile } = useAuthContext();
   const insets = useSafeAreaInsets();
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   // ─── Magic Scan spring animation ─────────────────────────────────────────
   const scanScale = useSharedValue(1);
@@ -125,11 +125,34 @@ export default function HomeScreen() {
     }
     return results;
   }, [searchMode, ingredientInput, sessions]);
+  // ─── Toggle dietary preference ────────────────────────────────────────────
+  const toggleDietaryPref = async (id: DietFilter) => {
+    if (!user || !profile) return;
+    const current = (profile.dietary_preferences as DietFilter[]) ?? [];
+    const next = current.includes(id)
+      ? current.filter((x) => x !== id)
+      : [...current, id];
+
+    setSavingPrefs(true);
+    try {
+      await supabase.from("profiles").update({
+        dietary_preferences: next,
+        updated_at: new Date().toISOString(),
+      }).eq("id", user.id);
+      await refreshProfile();
+    } catch (err: any) {
+      Alert.alert("Error", err?.message ?? "Could not save preference.");
+    } finally {
+      setSavingPrefs(false);
+    }
+  };
+
   // ─── Handlers ──────────────────────────────────────────────────────────────
   const handleAiSearch = async (query: string) => {
     setIsAiSearchLoading(true);
     try {
-      const { sessionId, recipe, session } = await searchRecipeByQuery(query, activeDietFilter);
+      const prefs = (profile?.dietary_preferences as DietFilter[]) ?? [];
+      const { sessionId, recipe, session } = await searchRecipeByQuery(query, prefs.length > 0 ? prefs[0] : null);
       await addSession(session);
       router.push({ pathname: "/recipe/[id]", params: { id: recipe.id, sessionId } });
     } catch (err: any) {
@@ -253,14 +276,16 @@ export default function HomeScreen() {
           style={{ flexGrow: 0, marginBottom: 16 }}
         >
           {DIET_FILTERS.map((filter) => {
-            const isActive = activeDietFilter === filter.id;
+            const prefs = (profile?.dietary_preferences as DietFilter[]) ?? [];
+            const isActive = prefs.includes(filter.id);
             return (
               <TouchableOpacity
                 key={filter.id}
                 onPress={() => {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setActiveDietFilter(isActive ? null : filter.id);
+                  toggleDietaryPref(filter.id);
                 }}
+                disabled={savingPrefs}
                 style={[
                   s.filterPill,
                   isActive
