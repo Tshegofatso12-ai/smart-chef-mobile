@@ -52,6 +52,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [trayIngredients, setTrayIngredients] = useState<Ingredient[]>([]);
   const [scannedImageUri, setScannedImageUri] = useState<string | null>(null);
   const [activeDietFilter, setActiveDietFilter] = useState<DietFilter | null>(null);
+  const [temperatureUnit, setTemperatureUnit] = useState<"fahrenheit" | "celsius">("fahrenheit");
 
   // Hydrate from Supabase when user logs in
   useEffect(() => {
@@ -76,7 +77,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         .select("recipe_id, session_id:recipes(session_id), saved_at")
         .eq("user_id", userId)
         .order("saved_at", { ascending: false }),
-    ]).then(([{ data: sessionRows }, { data: savedRows }]) => {
+      supabase
+        .from("profiles")
+        .select("temperature_unit")
+        .eq("id", userId)
+        .single(),
+    ]).then(([{ data: sessionRows }, { data: savedRows }, { data: profileData }]) => {
       if (sessionRows) setSessions(sessionRows.map(mapDbSession));
       if (savedRows) {
         setSavedRecipeIds(
@@ -86,6 +92,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             savedAt: new Date(row.saved_at).getTime(),
           }))
         );
+      }
+      if (profileData?.temperature_unit) {
+        setTemperatureUnit(profileData.temperature_unit);
       }
     });
   }, [session?.user?.id]);
@@ -148,6 +157,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setScannedImageUri,
         activeDietFilter,
         setActiveDietFilter,
+        temperatureUnit,
+        setTemperatureUnit,
       }}
     >
       {children}
