@@ -14,7 +14,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { supabase } from "@/lib/supabase";
+
+WebBrowser.maybeCompleteAuthSession();
 
 const C = {
   bg:          "#F8F7F2",
@@ -38,13 +42,22 @@ export default function AuthScreen() {
   const [password,        setPassword]        = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword,    setShowPassword]    = useState(false);
-  const [loading,         setLoading]         = useState(false);
+  const [loading,         setLoading]         = useState<false | "email" | "google" | "apple">(false);
   const [error,           setError]           = useState<string | null>(null);
 
   const switchMode = (next: Mode) => {
     setMode(next);
     setError(null);
     setConfirmPassword("");
+  };
+
+  const redirectAfterAuth = async (userId: string) => {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("onboarding_complete")
+      .eq("id", userId)
+      .single();
+    router.replace(profile?.onboarding_complete ? "/" : "/onboarding/preferences");
   };
 
   const handleSubmit = async () => {
@@ -62,7 +75,7 @@ export default function AuthScreen() {
       return;
     }
 
-    setLoading(true);
+    setLoading("email");
     try {
       if (mode === "signup") {
         const { error: err } = await supabase.auth.signUp({ email: email.trim(), password });
@@ -74,15 +87,84 @@ export default function AuthScreen() {
           password,
         });
         if (err) throw err;
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("onboarding_complete")
-          .eq("id", data.user.id)
-          .single();
-        router.replace(profile?.onboarding_complete ? "/" : "/onboarding/preferences");
+        await redirectAfterAuth(data.user.id);
       }
     } catch (err: any) {
       setError(err?.message ?? "Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading("google");
+    try {
+      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: "smart-chef://auth-callback",
+          skipBrowserRedirect: true,
+        },
+      });
+      if (oauthError) throw oauthError;
+      if (!data.url) throw new Error("No OAuth URL returned.");
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, "smart-chef://");
+      if (result.type !== "success") return;
+
+      // If the redirect landed on localhost the Google provider isn't configured in Supabase yet
+      if (result.url.includes("localhost")) {
+        throw new Error(
+          "Google sign-in is not configured yet. Enable the Google provider in your Supabase Dashboard under Authentication → Providers."
+        );
+      }
+
+      // Parse access_token and refresh_token from the redirect hash
+      const hash = result.url.split("#")[1] ?? result.url.split("?")[1] ?? "";
+      const params = Object.fromEntries(
+        hash.split("&").map((p) => p.split("=").map(decodeURIComponent))
+      );
+      if (!params.access_token || !params.refresh_token) {
+        throw new Error("Authentication failed. Please try again.");
+      }
+
+      await supabase.auth.setSession({
+        access_token: params.access_token,
+        refresh_token: params.refresh_token,
+      });
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await redirectAfterAuth(user.id);
+    } catch (err: any) {
+      setError(err?.message ?? "Google sign-in failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setError(null);
+    setLoading("apple");
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential.identityToken) throw new Error("No identity token from Apple.");
+
+      const { error: signInError } = await supabase.auth.signInWithIdToken({
+        provider: "apple",
+        token: credential.identityToken,
+      });
+      if (signInError) throw signInError;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) await redirectAfterAuth(user.id);
+    } catch (err: any) {
+      if ((err as any)?.code === "ERR_REQUEST_CANCELED") return; // user dismissed
+      setError(err?.message ?? "Apple sign-in failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -209,11 +291,11 @@ export default function AuthScreen() {
             {/* ── Primary submit ── */}
             <TouchableOpacity
               onPress={handleSubmit}
-              disabled={loading}
+              disabled={loading !== false}
               activeOpacity={0.9}
-              style={[s.submitBtn, loading && { opacity: 0.7 }]}
+              style={[s.submitBtn, loading !== false && { opacity: 0.7 }]}
             >
-              {loading
+              {loading === "email"
                 ? <ActivityIndicator color={C.primaryFg} />
                 : <Text style={s.submitBtnText}>{isSigning ? "Sign In" : "Create Account"}</Text>
               }
@@ -230,20 +312,30 @@ export default function AuthScreen() {
             <View style={s.socialRow}>
               <TouchableOpacity
                 activeOpacity={0.8}
-                style={s.socialBtn}
-                onPress={() => Alert.alert("Coming Soon", "Google sign-in will be available soon.")}
+                style={[s.socialBtn, loading !== false && { opacity: 0.6 }]}
+                disabled={loading !== false}
+                onPress={handleGoogleSignIn}
               >
-                <Ionicons name="logo-google" size={22} color={C.fg} />
+                {loading === "google"
+                  ? <ActivityIndicator size="small" color={C.fg} />
+                  : <Ionicons name="logo-google" size={22} color={C.fg} />
+                }
                 <Text style={s.socialBtnText}>Google</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={s.socialBtn}
-                onPress={() => Alert.alert("Coming Soon", "Apple sign-in will be available soon.")}
-              >
-                <Ionicons name="logo-apple" size={22} color={C.fg} />
-                <Text style={s.socialBtnText}>Apple</Text>
-              </TouchableOpacity>
+              {Platform.OS === "ios" && (
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[s.socialBtn, loading !== false && { opacity: 0.6 }]}
+                  disabled={loading !== false}
+                  onPress={handleAppleSignIn}
+                >
+                  {loading === "apple"
+                    ? <ActivityIndicator size="small" color={C.fg} />
+                    : <Ionicons name="logo-apple" size={22} color={C.fg} />
+                  }
+                  <Text style={s.socialBtnText}>Apple</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* ── Mode switch ── */}
