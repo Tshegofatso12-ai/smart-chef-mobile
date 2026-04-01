@@ -51,10 +51,10 @@ const C = {
 type FilterDef = { id: DietFilter; label: string; icon: string; activeColor: string };
 
 const DIET_FILTERS: FilterDef[] = [
-  { id: "low-fat",  label: "Low-Fat",  icon: "solar:leaf-bold",      activeColor: C.primary     },
-  { id: "low-carb", label: "Low-Carb", icon: "solar:bone-bold",      activeColor: C.chart3      },
-  { id: "keto",     label: "Keto",     icon: "solar:fire-bold",      activeColor: C.chart2      },
-  { id: "vegan",    label: "Vegan",    icon: "solar:heart-bold",     activeColor: "#E896B0"     },
+  { id: "low-fat",  label: "Low-Fat",  icon: "leaf-outline",      activeColor: C.primary     },
+  { id: "low-carb", label: "Low-Carb", icon: "nutrition-outline", activeColor: C.chart3      },
+  { id: "keto",     label: "Keto",     icon: "flame-outline",     activeColor: C.chart2      },
+  { id: "vegan",    label: "Vegan",    icon: "heart-outline",     activeColor: "#E896B0"     },
 ];
 
 function getGreeting(): string {
