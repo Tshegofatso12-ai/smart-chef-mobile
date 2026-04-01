@@ -59,6 +59,7 @@ export type Profile = {
   dietary_preferences: DietFilter[];
   allergies: string[];
   cooking_skill: CookingSkill;
+  temperature_unit: "fahrenheit" | "celsius";
   onboarding_complete: boolean;
   created_at: string;
   updated_at: string;
@@ -78,4 +79,6 @@ export type AppContextValue = {
   setScannedImageUri: (uri: string | null) => void;
   activeDietFilter: DietFilter | null;
   setActiveDietFilter: (filter: DietFilter | null) => void;
+  temperatureUnit: "fahrenheit" | "celsius";
+  setTemperatureUnit: (unit: "fahrenheit" | "celsius") => void;
 };

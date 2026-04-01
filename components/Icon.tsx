@@ -57,6 +57,11 @@ const ICON_MAP: Record<string, IconMapping> = {
   "solar:user-bold-duotone":         { set: "Ionicons", name: "person" },
   "solar:magnifer-linear":           { set: "Ionicons", name: "search-outline" },
   "solar:filter-bold-duotone":       { set: "Ionicons", name: "options" },
+  // dietary preference icons
+  "leaf-outline":                    { set: "Ionicons", name: "leaf-outline" },
+  "nutrition-outline":               { set: "Ionicons", name: "nutrition" },
+  "flame-outline":                   { set: "Ionicons", name: "flame-outline" },
+  "heart-outline":                   { set: "Ionicons", name: "heart-outline" },
 };
 
 export function Icon({ icon, size = 20, color = "#000" }: IconProps) {

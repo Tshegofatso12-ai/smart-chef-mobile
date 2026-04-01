@@ -62,10 +62,13 @@ export default function ProfileScreen() {
   const [savingPrefs,    setSavingPrefs]    = useState(false);
   const [deleting,       setDeleting]       = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [temperatureUnit, setTemperatureUnit] = useState<"fahrenheit" | "celsius">("fahrenheit");
+  const [savingUnit,     setSavingUnit]     = useState(false);
 
   useEffect(() => {
     setDisplayName(profile?.display_name ?? "");
     setSelectedPrefs((profile?.dietary_preferences as DietFilter[]) ?? []);
+    setTemperatureUnit((profile?.temperature_unit as "fahrenheit" | "celsius") ?? "fahrenheit");
   }, [profile]);
 
   const saveName = async () => {
@@ -101,6 +104,23 @@ export default function ProfileScreen() {
       await refreshProfile();
     } finally {
       setSavingPrefs(false);
+    }
+  };
+
+  const toggleTemperatureUnit = async () => {
+    const next = temperatureUnit === "fahrenheit" ? "celsius" : "fahrenheit";
+    setTemperatureUnit(next);
+    setSavingUnit(true);
+    try {
+      const { data: { user: u } } = await supabase.auth.getUser();
+      if (!u) return;
+      await supabase.from("profiles").update({
+        temperature_unit: next,
+        updated_at: new Date().toISOString(),
+      }).eq("id", u.id);
+      await refreshProfile();
+    } finally {
+      setSavingUnit(false);
     }
   };
 
@@ -375,6 +395,37 @@ export default function ProfileScreen() {
                   );
                 })}
               </View>
+            </View>
+          </View>
+
+          {/* ══════════════════════════════════════════════════════════ */}
+          {/* TEMPERATURE UNIT                                           */}
+          {/* ══════════════════════════════════════════════════════════ */}
+          <View style={s.section}>
+            <View style={s.sectionHeader}>
+              <Text style={s.sectionTitle}>Temperature Unit</Text>
+              {savingUnit
+                ? <ActivityIndicator size="small" color={C.primary} />
+                : <View style={s.sectionDot} />
+              }
+            </View>
+
+            <View style={s.unitToggleContainer}>
+              <TouchableOpacity
+                onPress={toggleTemperatureUnit}
+                activeOpacity={0.7}
+                style={[s.unitBtn, temperatureUnit === "fahrenheit" && s.unitBtnActive]}
+              >
+                <Text style={[s.unitText, temperatureUnit === "fahrenheit" && s.unitTextActive]}>°F</Text>
+              </TouchableOpacity>
+              <View style={s.unitDivider} />
+              <TouchableOpacity
+                onPress={toggleTemperatureUnit}
+                activeOpacity={0.7}
+                style={[s.unitBtn, temperatureUnit === "celsius" && s.unitBtnActive]}
+              >
+                <Text style={[s.unitText, temperatureUnit === "celsius" && s.unitTextActive]}>°C</Text>
+              </TouchableOpacity>
             </View>
           </View>
 
@@ -717,6 +768,43 @@ const s = StyleSheet.create({
     flexShrink: 1,
   },
   prefLabelOn: { color: C.primaryFg },
+
+  // ── Temperature unit toggle ────────────────────────────────────────────────────
+  unitToggleContainer: {
+    flexDirection: "row",
+    backgroundColor: C.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(226,232,240,0.6)",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  unitBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: C.card,
+  },
+  unitBtnActive: {
+    backgroundColor: C.primary,
+  },
+  unitDivider: {
+    width: 1,
+    backgroundColor: "rgba(226,232,240,0.6)",
+  },
+  unitText: {
+    fontFamily: "NunitoSans_700Bold",
+    fontSize: 16,
+    color: C.fg,
+  },
+  unitTextActive: {
+    color: C.primaryFg,
+  },
 
   // ── Cards ─────────────────────────────────────────────────────────────────────
   card: {
